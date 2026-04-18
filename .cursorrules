@@ -54,6 +54,39 @@ Prompt MUST include all of:
 
 Save as `<slug>-dark.png`.
 
+### Step 2.5 — MANDATORY QA REVIEW (before finalizing anything)
+
+After Step 1 and Step 2 produce the two PNGs, you MUST send each image to a separate readonly reviewer subagent for QA. Use the `Task` tool with `subagent_type: "explore"` and `readonly: true`. Do one review call per image.
+
+**Reviewer prompt template (print-file review):**
+```
+You are a QA reviewer for a Print-on-Demand store. Read this image and score it: <absolute_path>
+
+This is the <light|dark>-variant print file for the concept "<concept>". It will be uploaded to Printify as the artwork for a t-shirt, so it must meet strict criteria.
+
+Criteria (ALL must pass):
+1. EXACTLY ONE design in the image. No duplication, no side-by-side copies, no tiled sticker-sheet layout, no multiple rows of the same subject.
+2. Pure solid white background OUTSIDE the design. No shirt, no hanger, no mockup, no fabric, no person, no background scene, no border, no frame.
+3. Typography is legible, centered, bold, and matches the concept.
+4. The design visually matches the concept "<concept>".
+5. For LIGHT variant: darker saturated pigments with heavy BLACK outlines.
+   For DARK variant: bright SATURATED mid-tone fills (hot pink, neon yellow, electric blue, mint teal, lime green, magenta). ZERO cream, off-white, beige, or light-gray fills INSIDE the design — pixels with R,G,B all >= 240 will be erased by the transparency pass and cause holes.
+6. No obvious artifacts (extra limbs, mangled text, duplicated words, warped faces).
+
+Return ONLY this JSON (no prose, no markdown):
+{
+  "approved": true|false,
+  "score": <0-10>,
+  "issues": [<short strings, one per concrete problem>],
+  "recommendations": [<short strings, one per concrete fix for a regen prompt>]
+}
+```
+
+**Handling the verdict:**
+- If `approved: true` → continue to Step 3.
+- If `approved: false` → regenerate ONLY the failing variant, incorporating every item from `recommendations` verbatim into the new prompt, then re-submit to the reviewer.
+- Retry up to **3 times per variant**. If still failing after 3 tries, stop, report the last set of issues to the user, and let them decide.
+
 ### Step 3 — Finalize the design folder (ONE command)
 Immediately after both designs are generated, run:
 ```
@@ -80,6 +113,34 @@ Save as `<slug>-mockup-1.png`, `<slug>-mockup-2.png`, `<slug>-mockup-3.png`.
 
 **Do NOT run make-transparent.mjs on mockups.** They are realistic photographs; transparency would destroy them.
 
+### Step 4.5 — MANDATORY QA REVIEW for every mockup
+
+Each mockup must also go through a readonly reviewer subagent (`Task` with `subagent_type: "explore"`, `readonly: true`). Use this prompt per image:
+
+```
+You are a QA reviewer for an Etsy POD mockup photo. Read this image: <absolute_path>
+
+This is mockup #<N> for the t-shirt concept "<concept>". It will be used as a primary listing photo on Etsy.
+
+Criteria (ALL must pass):
+1. EXACTLY ONE person wearing EXACTLY ONE shirt.
+2. The printed design on the chest is clearly visible, centered, reasonably sized, and NOT cropped.
+3. The design text is legible and NOT warped, pixelated, mangled, or hallucinated into different words.
+4. The shirt color and model make sense for the <light|dark> variant (light variant → light-colored shirt; dark variant → dark-colored shirt).
+5. Photorealistic style. No extra limbs, deformed faces, wrong number of fingers, or obvious AI artifacts visible in the composition.
+6. The printed artwork matches the original design concept "<concept>".
+
+Return ONLY this JSON:
+{
+  "approved": true|false,
+  "score": <0-10>,
+  "issues": [<short strings>],
+  "recommendations": [<short strings to feed into the next generation prompt>]
+}
+```
+
+Same retry policy: regenerate the failing mockup up to 3 times incorporating the reviewer's recommendations; after 3 failures, report and move on.
+
 ### Step 5 — Re-run the finalizer to ingest the mockups
 After the mockups are generated, run the same finalize command again:
 ```
@@ -94,14 +155,15 @@ After delivering the 7 textual parts of the package, update `designs/<slug>/mani
 ---
 
 ## GOLDEN RULES (never violate)
-1. **Both variants always.** Every concept needs a `-light` AND a `-dark` file.
-2. **Dark variant never uses cream/off-white/light-gray fills.** Only saturated mid-tones. Outlines stay BLACK.
-3. **Design files are transparent PNGs.** Printify requires it.
-4. **Mockups are NOT made transparent.** They are real photos.
-5. **One design per image.** Forbid duplication explicitly in every image prompt.
-6. **Everything lives in `designs/<slug>/`.** Never scatter files in `images/`, `mockups/`, or the Cursor assets dir.
-7. **Use kebab-case slugs.** `overthinking-is-my-cardio`, `therapy-wine-cheaper`, etc.
-8. **Threshold default is 240.** If transparency is eating part of the design, rerun with `--threshold=220` or regenerate with more saturated fills.
+1. **Every image goes through a QA reviewer subagent.** Design files use the print-file review criteria; mockups use the mockup review criteria. No image is finalized or shown to the user until it is APPROVED by the reviewer (or has exhausted 3 retry attempts).
+2. **Both variants always.** Every concept needs a `-light` AND a `-dark` file.
+3. **Dark variant never uses cream/off-white/light-gray fills.** Only saturated mid-tones. Outlines stay BLACK.
+4. **Design files are transparent PNGs.** Printify requires it.
+5. **Mockups are NOT made transparent.** They are real photos.
+6. **One design per image.** Forbid duplication explicitly in every image prompt.
+7. **Everything lives in `designs/<slug>/`.** Never scatter files in `images/`, `mockups/`, or the Cursor assets dir.
+8. **Use kebab-case slugs.** `overthinking-is-my-cardio`, `therapy-wine-cheaper`, etc.
+9. **Threshold default is 240.** If transparency is eating part of the design, rerun with `--threshold=220` or regenerate with more saturated fills.
 
 ---
 
