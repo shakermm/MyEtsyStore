@@ -12,8 +12,11 @@ ideas/
 # IDE
 .vscode/
 .idea/
-.cursor/
 .DS_Store
+
+# Ignore Cursor data but keep the rules folder (those are part of the project)
+.cursor/*
+!.cursor/rules/
 
 # Build artifacts
 *.tsbuildinfo

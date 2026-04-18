@@ -27,19 +27,70 @@ When generating images, the GenerateImage prompt MUST include:
 Example correct opener for every image prompt:
 "A Printify print-ready t-shirt design on a pure solid white background with no shirt or mockup, centered square composition with clean margins, high resolution print-on-demand graphic artwork showing ONLY the design..."
 
-After generating:
-1. **ALWAYS immediately copy the image to `C:\Users\mikes\MyEtsyStore\images\`** using:
-   `Copy-Item "C:\Users\mikes\.cursor\projects\c-Users-mikes-MyEtsyStore\assets\<filename>.png" -Destination "C:\Users\mikes\MyEtsyStore\images\<filename>.png" -Force`
-2. **NEVER leave images in the Cursor assets folder** - they MUST end up in the `images/` folder
-3. **Use clean kebab-case filenames** (e.g., `fuck-it-era.png`, `therapy-wine-cheaper.png`)
-4. **Generate images proactively** when user asks for ideas — don't just give text
+## MANDATORY IMAGE PIPELINE (ABSOLUTELY CRITICAL - ZERO EXCEPTIONS):
 
-**If you accidentally generate a mockup instead of a design file, immediately regenerate with the correct prompt.**
+**Every single design needs TWO variants: one for LIGHT shirts and one for DARK shirts.**
 
-## Workflow:
-- User asks for ideas → Generate concepts + images + save to `images/` folder automatically
-- NO user confirmation needed for image generation and saving
-- Each idea should have its image generated and saved in one seamless flow
+Reason: A single color palette will not read well on both black and white garments. The light-shirt version uses darker pigments + black outlines. The dark-shirt version uses brighter/cream pigments + white/light outlines. This dramatically improves Printify listings and conversion.
+
+**For every idea, you MUST generate BOTH variants. Naming convention:**
+- `<concept-slug>-light.png` → tuned for white/cream/light shirts (darker palette, black outlines)
+- `<concept-slug>-dark.png` → tuned for black/navy/dark shirts (brighter/cream palette, white outlines, glowing highlights)
+
+### Step 1 — Generate BOTH images (batch them in one message when possible)
+
+**Light-shirt variant prompt must include:**
+- "Printify print-ready t-shirt design optimized for LIGHT/WHITE shirts"
+- "rich saturated colors with heavy BLACK outlines"
+- "darker color palette that stands out on light fabric"
+- "pure solid white background, no shirt, no mockup"
+- "centered square composition, high resolution print-on-demand graphic"
+
+**Dark-shirt variant prompt must include:**
+- "Printify print-ready t-shirt design optimized for DARK/BLACK shirts"
+- "bright vivid colors, cream/off-white fills, and WHITE/LIGHT outlines"
+- "colors glow and pop on dark fabric — NO dark burgundy, NO navy, NO black as dominant fills"
+- "pure solid white background, no shirt, no mockup"
+- "centered square composition, high resolution print-on-demand graphic"
+
+### Step 2 — Copy to the repo's images folder
+Immediately run:
+```
+Copy-Item "C:\Users\mikes\.cursor\projects\c-Users-mikes-MyEtsyStore\assets\my-design.png" -Destination "C:\Users\mikes\MyEtsyStore\images\my-design.png" -Force
+```
+
+### Step 3 — Convert white background to TRANSPARENT (MANDATORY — Printify needs this)
+Immediately run:
+```
+node scripts/make-transparent.mjs images/my-design.png images/my-design.png
+```
+This overwrites the image in-place with a transparent-background version. Printify requires transparent PNGs — if the background is white, it will show as a white box on dark shirts.
+
+### Batched version (for multiple images — RECOMMENDED):
+For each concept, you generate 2 files (light + dark). Combine all copy + transparency commands into one Shell call using semicolons. Example for one concept:
+```
+Copy-Item "<assets>\concept-light.png" -Destination "images\concept-light.png" -Force; Copy-Item "<assets>\concept-dark.png" -Destination "images\concept-dark.png" -Force; node scripts/make-transparent.mjs images/concept-light.png images/concept-light.png; node scripts/make-transparent.mjs images/concept-dark.png images/concept-dark.png
+```
+
+## Rules (ALL MANDATORY):
+1. **ALWAYS generate BOTH a `-light` and a `-dark` variant** for every design concept
+2. NEVER end your turn after GenerateImage without also copying AND making transparent
+3. EVERY image must be transparent PNG - Printify requires this
+4. Use clean kebab-case filenames with `-light` or `-dark` suffix (e.g., `fuck-it-era-light.png`, `fuck-it-era-dark.png`)
+5. Save to `C:\Users\mikes\MyEtsyStore\images\` - never leave in Cursor assets folder
+6. Never generate shirt mockups as the deliverable - only design files
+7. Generate images proactively when user asks for ideas — don't just give text
+8. The threshold in make-transparent.mjs defaults to 240; adjust with `--threshold=220` if needed
+
+## Workflow summary:
+User asks for ideas → For each idea: generate BOTH light + dark variant → Copy both to images/ → Make both transparent → ALL AUTOMATIC, NO USER CONFIRMATION NEEDED
+
+## NEVER ASK RULE:
+- NEVER ask "Do you want me to generate images?" — just generate them.
+- NEVER ask "Should I create the dark version?" — always create both light and dark.
+- NEVER end an idea response with "Want me to generate the images?" — the images should already be generated and saved.
+- If the user gives you any idea or theme, IMMEDIATELY generate + save + make transparent. No confirmation. No preview.
+- The only time to stop and ask is if a request is genuinely ambiguous about what PRODUCT or TONE they want. Never stop to ask permission to do the actual image work.
 
 You can use any model available in Cursor for the highest quality results.
 
