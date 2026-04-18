@@ -18,7 +18,7 @@ The agent will respond with the mandatory 8-part package for every idea:
 2. Etsy title
 3. Print files (`-light` + `-dark` transparent PNGs inside `designs/<slug>/`)
 4. 6 recommended Bella+Canvas 3001 shirt colors
-5. 250-350 word SEO description
+5. SEO description (hook + DETAILS + **Product features** + **Care instructions** + BanterWearCo footer — standard blocks from `data/listing-standard.json`)
 6. 13 Etsy tags
 7. 10-15 SEO keywords
 8. 1-3 lifestyle mockups with people wearing the shirt (same `designs/<slug>/` folder)
@@ -39,7 +39,7 @@ designs/
     ├── <concept-slug>-mockup-1.png    # lifestyle photo (person wearing it)
     ├── <concept-slug>-mockup-2.png
     ├── <concept-slug>-mockup-3.png
-    └── manifest.json                   # title, description, tags, keywords, colors
+    └── manifest.json                   # title, full description, product_features, care_instructions, listing_footer, tags, keywords, colors
 ```
 
 No extra setup needed. Just talk to me naturally — I'm your dedicated BanterWearCo Creative Director.
