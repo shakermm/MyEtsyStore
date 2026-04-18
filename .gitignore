@@ -9,6 +9,11 @@ dist/
 ideas/
 *.log
 
+# Legacy/scratch asset folders (superseded by designs/<slug>/)
+images/
+mockups/
+generated-images/
+
 # IDE
 .vscode/
 .idea/

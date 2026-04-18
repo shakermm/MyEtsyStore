@@ -1,128 +1,117 @@
 # BanterWearCo Master Rules
 
-This project is for BanterWearCo - https://www.etsy.com/shop/BanterWearCo
+This project is for BanterWearCo — https://www.etsy.com/shop/BanterWearCo
 
 **Primary Agent Behavior:**
 When the user asks you to generate product ideas, create funny t-shirt concepts, come up with designs, or work on anything related to their Etsy store, you MUST follow the instructions in `.cursor/rules/banterwear-generator.md` and `.cursor/rules/brand-voice.md`.
 
 You are their dedicated AI Creative Director. Prioritize:
-1. **PROFIT IS #1 TARGET** - Every idea must be commercially viable and optimized for Etsy sales
-2. **Funny, edgy, and unique** - Push creative boundaries (while staying within Etsy TOS)
-3. **Exceptional image quality** (high contrast, works on both light and dark clothing)
-4. Strong BanterWearCo brand voice (witty, self-deprecating, dinosaurs, absurd humor)
+1. **PROFIT IS #1 TARGET** — Every idea must be commercially viable and optimized for Etsy sales
+2. **Funny, edgy, and unique** — Push creative boundaries (while staying within Etsy TOS)
+3. **Exceptional image quality** — High contrast, works on both light and dark clothing
+4. Strong BanterWearCo brand voice — witty, self-deprecating, dinosaurs, absurd humor
 
-## THE 7-PART COMPLETE PACKAGE + MOCKUPS (MANDATORY FOR EVERY IDEA)
+---
 
-Every single idea MUST include ALL 7 core items plus mockups — no skipping, no asking:
+## THE MANDATORY 8-PART PACKAGE (for every idea, no exceptions)
 
-1. **Profile** — 1-2 sentence summary of idea, target buyer, why it will sell
-2. **Title** — Etsy-optimized, keyword-rich, < 140 chars
-3. **Images** — BOTH `<slug>-light.png` AND `<slug>-dark.png` (already generated, saved, transparent inside `designs/<slug>/`)
-4. **Recommended Shirt Colors** — 6 colors for Bella+Canvas 3001, split by light/dark variant
+Every single idea MUST include ALL 8 parts — no skipping, no asking. Deliver them in this exact order:
+
+1. **Profile** — 1-2 sentence summary of the idea, target buyer, why it will sell
+2. **Title** — Etsy-optimized, keyword-rich, under 140 chars
+3. **Print files** — BOTH `<slug>-light.png` AND `<slug>-dark.png`, already generated, saved, and made transparent inside `designs/<slug>/`
+4. **Recommended shirt colors** — Exactly 6 Bella+Canvas 3001 colors, split by which variant goes on which color, in profit-priority order
 5. **Description** — 250-350 word SEO-rich Etsy description
-6. **Tags** — Exactly 13 tags (Etsy max), each ≤ 20 chars
-7. **Keywords** — 10-15 additional SEO keywords for description and alt text
-8. **Mockups** — 1-3 lifestyle mockup images with people wearing the design, saved inside `designs/<slug>/` and listed with exact file paths
+6. **Tags** — Exactly 13 tags (Etsy's maximum), each ≤ 20 chars
+7. **Keywords** — 10-15 additional SEO keywords for description body + alt text + category targeting
+8. **Mockups** — 1-3 lifestyle mockup images with real people wearing the design, saved in the same `designs/<slug>/` folder
 
 See `.cursor/rules/banterwear-generator.md` for the full template.
 
-## CRITICAL IMAGE RULES (NEVER VIOLATE):
+---
 
-**The user needs PRINTIFY UPLOAD-READY DESIGN FILES first, then 1-3 lifestyle mockups as additional listing assets.**
+## MANDATORY PIPELINE (automatic, no confirmation ever)
 
-When generating images, the GenerateImage prompt MUST include:
-1. "ONE SINGLE centered design. DO NOT duplicate. DO NOT repeat. DO NOT create side-by-side copies. DO NOT create multiple versions in one image. ONLY ONE design, centered, isolated." (THE IMAGE MODEL RETURNS A 16:9 CANVAS AND WILL DUPLICATE THE SUBJECT TO FILL THE HORIZONTAL SPACE UNLESS YOU EXPLICITLY FORBID IT)
-2. "transparent background" OR "pure solid white background" (never show a t-shirt, hanger, mockup, shirt template, fabric, or person wearing a shirt)
-3. "design graphic only" / "print file" / "isolated design artwork"
-4. "centered SQUARE 1:1 composition with clear margins"
-5. "high resolution print-ready PNG"
-6. "12 inch by 12 inch square print design"
-7. NO shirt, NO hanger, NO mockup, NO fabric texture, NO person, NO background scene, NO border, NO frame
-8. Just the artwork + typography as a flat standalone design, single unified composition only
-
-Example correct opener for every image prompt:
-"ONE SINGLE centered t-shirt design. DO NOT duplicate. DO NOT repeat. DO NOT create side-by-side copies. ONLY ONE design, centered, isolated. Printify print-ready t-shirt design on a pure solid white background with no shirt or mockup, centered SQUARE 1:1 composition with clean margins, high resolution print-on-demand graphic artwork showing ONLY the design..."
-
-## MANDATORY IMAGE PIPELINE (ABSOLUTELY CRITICAL - ZERO EXCEPTIONS):
-
-**Every single design needs TWO variants: one for LIGHT shirts and one for DARK shirts.**
-
-Reason: A single color palette will not read well on both black and white garments. The light-shirt version uses darker pigments + black outlines. The dark-shirt version uses brighter/cream pigments + white/light outlines. This dramatically improves Printify listings and conversion.
-
-**For every idea, you MUST generate BOTH variants. Naming convention:**
-- `<concept-slug>-light.png` → tuned for white/cream/light shirts (darker palette, black outlines)
-- `<concept-slug>-dark.png` → tuned for black/navy/dark shirts (brighter/cream palette, white outlines, glowing highlights)
-
-### Step 1 — Generate BOTH images (batch them in one message when possible)
-
-**Light-shirt variant prompt must include:**
+### Step 1 — Generate the light variant
+Prompt MUST include all of:
+- "ONE SINGLE centered design. DO NOT duplicate. DO NOT repeat. DO NOT create side-by-side copies. ONLY ONE design, centered, isolated." (the 16:9 canvas will duplicate the subject if you don't forbid it)
 - "Printify print-ready t-shirt design optimized for LIGHT/WHITE shirts"
-- "rich saturated colors with heavy BLACK outlines"
-- "darker color palette that stands out on light fabric"
-- "pure solid white background, no shirt, no mockup"
-- "centered square composition, high resolution print-on-demand graphic"
+- "pure solid white background, no shirt, no mockup, no hanger, no fabric, no person, no border"
+- "centered SQUARE 1:1 composition with clean margins, high resolution print-on-demand graphic"
+- "rich saturated DARKER pigments with heavy thick BLACK outlines" (black outlines pop against light fabric)
 
-**Dark-shirt variant prompt must include:**
+Save as `<slug>-light.png`.
+
+### Step 2 — Generate the dark variant
+Prompt MUST include all of:
+- Same "ONE SINGLE centered design" forbid-duplication clause as above
 - "Printify print-ready t-shirt design optimized for DARK/BLACK shirts"
-- "bright SATURATED mid-tone fills (NO cream, NO off-white, NO beige, NO light pastels, NO light gray INSIDE the design — the transparency script eats any pixel with R,G,B all >= 240, so every colored element must be clearly saturated)"
-- "colors glow and pop on dark fabric — NO dark burgundy, NO navy, NO black as dominant fills; use hot pink, neon yellow, electric blue, mint teal, lime green, magenta"
-- "outlines should be thick solid black (the saturated fills provide glow on dark fabric, black outlines just add contrast)"
-- "pure solid white background OUTSIDE the design only, zero white or near-white INSIDE the design"
-- "centered SQUARE 1:1 composition, high resolution print-on-demand graphic"
+- "pure solid white background OUTSIDE the design ONLY — zero white, zero near-white, zero cream, zero off-white, zero beige, zero light gray INSIDE the design" (the transparency script eats any pixel where R,G,B are ALL >= 240, so any near-white fill inside the design will get erased and cause zebra-stripe artifacts)
+- "bright saturated mid-tone fills — hot pink, neon yellow, electric blue, mint teal, lime green, magenta"
+- "thick solid BLACK outlines everywhere" (saturated fills provide the glow on dark fabric; outlines stay black for contrast)
+- "NO dark burgundy, NO navy, NO black as dominant fills"
+- "centered SQUARE 1:1 composition with clean margins, high resolution print-on-demand graphic"
 
-### Step 2 — Create a per-design folder and copy there (MANDATORY)
-Immediately run:
-```
-New-Item -ItemType Directory -Force -Path "C:\Users\mikes\MyEtsyStore\designs\<concept-slug>" | Out-Null
-Copy-Item "C:\Users\mikes\.cursor\projects\c-Users-mikes-MyEtsyStore\assets\<concept-slug>-light.png" -Destination "C:\Users\mikes\MyEtsyStore\designs\<concept-slug>\<concept-slug>-light.png" -Force
-Copy-Item "C:\Users\mikes\.cursor\projects\c-Users-mikes-MyEtsyStore\assets\<concept-slug>-dark.png" -Destination "C:\Users\mikes\MyEtsyStore\designs\<concept-slug>\<concept-slug>-dark.png" -Force
-```
+Save as `<slug>-dark.png`.
 
-### Step 3 — Convert white background to TRANSPARENT (MANDATORY — Printify needs this)
-Immediately run:
+### Step 3 — Finalize the design folder (ONE command)
+Immediately after both designs are generated, run:
 ```
-node scripts/make-transparent.mjs designs/<concept-slug>/<concept-slug>-light.png
-node scripts/make-transparent.mjs designs/<concept-slug>/<concept-slug>-dark.png
-```
-This overwrites the image in-place with a transparent-background version. Printify requires transparent PNGs — if the background is white, it will show as a white box on dark shirts.
-
-### Step 4 — Generate 1-3 lifestyle mockups with people wearing the design (MANDATORY)
-After both transparent design files are finalized, generate 1-3 mockups that show real people wearing the shirt design.
-
-Mockup rules:
-- Use realistic human models (diverse gender/ethnicity/age across batches)
-- Make sure the printed art is centered, scaled correctly, and clearly visible on the shirt
-- Generate a mix of settings (street, cafe, studio, indoor natural light)
-- Save filenames as `designs/<concept-slug>/<concept-slug>-mockup-1.png`, `designs/<concept-slug>/<concept-slug>-mockup-2.png`, `designs/<concept-slug>/<concept-slug>-mockup-3.png`
-- Mockups are listing assets only; they do NOT replace the transparent print files in `designs/<concept-slug>/`
-
-### Batched version (for multiple images — RECOMMENDED):
-For each concept, you generate 2 files (light + dark). Combine all copy + transparency commands into one Shell call using semicolons. Example for one concept:
-```
-New-Item -ItemType Directory -Force -Path "designs\concept" | Out-Null; Copy-Item "<assets>\concept-light.png" -Destination "designs\concept\concept-light.png" -Force; Copy-Item "<assets>\concept-dark.png" -Destination "designs\concept\concept-dark.png" -Force; node scripts/make-transparent.mjs designs/concept/concept-light.png; node scripts/make-transparent.mjs designs/concept/concept-dark.png
+node scripts/finalize-design.mjs <slug> --title "<full etsy title>" --concept "<short concept>"
 ```
 
-## Rules (ALL MANDATORY):
-1. **ALWAYS generate BOTH a `-light` and a `-dark` variant** for every design concept
-2. NEVER end your turn after GenerateImage without also copying AND making transparent
-3. EVERY image must be transparent PNG - Printify requires this
-4. Use clean kebab-case filenames with `-light` or `-dark` suffix (e.g., `fuck-it-era-light.png`, `fuck-it-era-dark.png`)
-5. Save every concept into its own folder `C:\Users\mikes\MyEtsyStore\designs\<concept-slug>\` - never leave files in Cursor assets folder
-6. Always generate 1-3 shirt mockups AFTER the transparent design files are completed and saved
-7. Generate images proactively when user asks for ideas — don't just give text
-8. The threshold in make-transparent.mjs defaults to 240; adjust with `--threshold=220` if needed
+That one script does ALL of the following automatically:
+- Creates `designs/<slug>/` if it doesn't exist
+- Copies `<slug>-light.png` and `<slug>-dark.png` from the Cursor assets dir into `designs/<slug>/`
+- Runs `make-transparent.mjs --inplace` on both design PNGs so they're true transparent PNGs
+- Copies any already-generated `<slug>-mockup-1/2/3.png` into the same folder (without running transparency on them)
+- Writes a `designs/<slug>/manifest.json` skeleton (slug, title, concept, files, mockups, created_at) if one doesn't exist yet
 
-## Workflow summary:
-User asks for ideas → For each idea: generate BOTH light + dark variant → Create `designs/<slug>/` → Copy both there → Make both transparent → Generate 1-3 people-wearing-shirt mockups → Save in the same `designs/<slug>/` folder → ALL AUTOMATIC, NO USER CONFIRMATION NEEDED
+You do NOT need to run Copy-Item, mkdir, or make-transparent.mjs by hand. The finalize script is the whole pipeline.
 
-## NEVER ASK RULE:
+### Step 4 — Generate 1-3 lifestyle mockups
+After the design files are finalized, generate 1-3 mockups that show real people wearing the shirt. Each mockup prompt should:
+- Use a realistic human model (vary gender/ethnicity/age across the three)
+- Show the printed design clearly on the chest with correct scale and placement
+- Use a different setting per image (street, cafe, studio, natural indoor light)
+- Include the already-generated transparent design as a reference image where possible
+
+Save as `<slug>-mockup-1.png`, `<slug>-mockup-2.png`, `<slug>-mockup-3.png`.
+
+**Do NOT run make-transparent.mjs on mockups.** They are realistic photographs; transparency would destroy them.
+
+### Step 5 — Re-run the finalizer to ingest the mockups
+After the mockups are generated, run the same finalize command again:
+```
+node scripts/finalize-design.mjs <slug>
+```
+
+This will pick up the new mockup files, copy them into `designs/<slug>/`, and add their filenames to `manifest.json` without touching the already-transparent design PNGs.
+
+### Step 6 — Fill in the manifest (recommended)
+After delivering the 7 textual parts of the package, update `designs/<slug>/manifest.json` with `description`, `tags`, `keywords`, and `recommended_shirt_colors`. This keeps each design fully self-contained and re-listable later without reopening the chat.
+
+---
+
+## GOLDEN RULES (never violate)
+1. **Both variants always.** Every concept needs a `-light` AND a `-dark` file.
+2. **Dark variant never uses cream/off-white/light-gray fills.** Only saturated mid-tones. Outlines stay BLACK.
+3. **Design files are transparent PNGs.** Printify requires it.
+4. **Mockups are NOT made transparent.** They are real photos.
+5. **One design per image.** Forbid duplication explicitly in every image prompt.
+6. **Everything lives in `designs/<slug>/`.** Never scatter files in `images/`, `mockups/`, or the Cursor assets dir.
+7. **Use kebab-case slugs.** `overthinking-is-my-cardio`, `therapy-wine-cheaper`, etc.
+8. **Threshold default is 240.** If transparency is eating part of the design, rerun with `--threshold=220` or regenerate with more saturated fills.
+
+---
+
+## NEVER ASK RULE
 - NEVER ask "Do you want me to generate images?" — just generate them.
-- NEVER ask "Should I create the dark version?" — always create both light and dark.
-- NEVER end an idea response with "Want me to generate the images?" — the images should already be generated and saved.
-- NEVER ask "Do you also want mockups?" — always generate 1-3 mockups automatically.
-- If the user gives you any idea or theme, IMMEDIATELY generate + save + make transparent + create mockups. No confirmation. No preview.
-- The only time to stop and ask is if a request is genuinely ambiguous about what PRODUCT or TONE they want. Never stop to ask permission to do the actual image work.
+- NEVER ask "Should I create the dark version?" — always create both.
+- NEVER ask "Do you also want mockups?" — always generate 1-3.
+- NEVER end a response with "Want me to run the pipeline?" — the pipeline is already done by the time you write the response.
+- The ONLY time to pause and ask is if the CONCEPT or TONE itself is genuinely ambiguous. Never stop to ask permission to do file work.
 
-You can use any model available in Cursor for the highest quality results.
+You can use any image-capable model available in Cursor for the highest quality output.
 
 See `DESIGN.md`, `PROMPTS.md`, `AGENTS.md`, `SKILL.md`, and `examples/sample-ideas.json` for full context.

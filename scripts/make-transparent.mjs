@@ -2,14 +2,15 @@
 /**
  * Convert white/near-white backgrounds in PNG images to transparent.
  * Usage:
- *   node scripts/make-transparent.mjs <inputPath> [outputPath] [--threshold=240]
+ *   node scripts/make-transparent.mjs <inputPath> [outputPath] [--threshold=240] [--inplace]
  *
  * Defaults:
  *   - outputPath: adds "-transparent" before the extension
  *   - threshold: 240 (any pixel where R,G,B are all >= 240 becomes transparent)
+ *   - --inplace: overwrite the input file instead of creating a -transparent copy
  *
  * Example:
- *   node scripts/make-transparent.mjs images/fuck-it-era-design.png
+ *   node scripts/make-transparent.mjs designs/foo/foo-light.png --inplace
  */
 
 import sharp from 'sharp';
@@ -18,17 +19,20 @@ import { existsSync } from 'fs';
 
 const args = process.argv.slice(2);
 if (args.length === 0) {
-  console.error('Usage: node scripts/make-transparent.mjs <inputPath> [outputPath] [--threshold=240]');
+  console.error('Usage: node scripts/make-transparent.mjs <inputPath> [outputPath] [--threshold=240] [--inplace]');
   process.exit(1);
 }
 
 let threshold = 240;
+let inplace = false;
 let inputPath = null;
 let outputPath = null;
 
 for (const arg of args) {
   if (arg.startsWith('--threshold=')) {
     threshold = parseInt(arg.split('=')[1], 10);
+  } else if (arg === '--inplace') {
+    inplace = true;
   } else if (!inputPath) {
     inputPath = arg;
   } else if (!outputPath) {
@@ -44,9 +48,13 @@ if (!existsSync(inputPath)) {
 }
 
 if (!outputPath) {
-  const dir = dirname(inputPath);
-  const name = basename(inputPath, extname(inputPath));
-  outputPath = join(dir, `${name}-transparent.png`);
+  if (inplace) {
+    outputPath = inputPath;
+  } else {
+    const dir = dirname(inputPath);
+    const name = basename(inputPath, extname(inputPath));
+    outputPath = join(dir, `${name}-transparent.png`);
+  }
 } else {
   outputPath = resolve(outputPath);
 }

@@ -1,37 +1,45 @@
 # BanterWearCo Idea Generator Skill
 
-**Name**: BanterWearCo Product Idea Generator
+**Name:** BanterWearCo Product Idea Generator
 
-**Description**: 
-A specialized AI agent/skill for rapidly generating high-quality, production-ready funny Print-on-Demand product ideas for the BanterWearCo Etsy store. Optimized for Cursor - can be triggered naturally in chat.
+**Description:**
+A specialized Cursor skill that acts as the Creative Director for the BanterWearCo Etsy Print-on-Demand store. Every idea is delivered as a fully self-contained listing package — text + transparent print files + lifestyle mockups — inside its own folder under `designs/<slug>/`.
 
-**How to Use**:
+## How to use
+
 Just say things like:
 - "Generate 3 new ideas"
 - "Create dinosaur themed shirts"
-- "Give me trending funny concepts"
-- "I need new shower curtain ideas"
-- Or just "surprise me with some BanterWearCo ideas"
+- "Give me a trending funny concept"
+- "Surprise me with a profit-focused design"
 
-The agent will automatically respond with structured, high-quality output including:
-- Punchy concepts
-- Etsy-optimized titles & descriptions  
-- 15-20 targeted tags
-- World-class image prompts (specifically engineered to work on both light and dark clothing)
-- Color strategy guidance
-- Print-ready production notes
+The agent will respond with the mandatory 8-part package for every idea:
+1. Profile
+2. Etsy title
+3. Print files (`-light` + `-dark` transparent PNGs inside `designs/<slug>/`)
+4. 6 recommended Bella+Canvas 3001 shirt colors
+5. 250-350 word SEO description
+6. 13 Etsy tags
+7. 10-15 SEO keywords
+8. 1-3 lifestyle mockups with people wearing the shirt (same `designs/<slug>/` folder)
 
-**Key Features**:
-- Uses the full context from `DESIGN.md`, `PROMPTS.md`, `AGENTS.md`, `.cursor/rules/`, and `SKILL.md`
-- Prioritizes **top-tier image quality** — all prompts are engineered to work excellently on both light and dark clothing
-- When you want **actual image files**, run `npm run generate -- --images` — images will be automatically saved to the `./images/` folder in this repository
-- Can use any model available in Cursor for the highest quality creative output
-- Outputs are production-ready (detailed prompts + saved PNG files when using the CLI with `--images`)
-- Maintains perfect consistency with your existing store voice ("Nobody needs this much baby oil", Psycho Bakery, dinosaur themes, etc.)
+## Key features
+- Every concept gets its own `designs/<slug>/` folder containing: `<slug>-light.png`, `<slug>-dark.png`, `<slug>-mockup-1/2/3.png`, and `manifest.json`
+- Print files are automatically made transparent via `scripts/make-transparent.mjs`
+- All filesystem work is handled by a single command: `node scripts/finalize-design.mjs <slug>`
+- Uses any image-capable model available in Cursor for the actual artwork
+- Rules live in `.cursorrules` and `.cursor/rules/banterwear-generator.md` (edit these to change behavior)
 
-**Technical Implementation**:
-The behavior is driven by the rules in `.cursor/rules/banterwear-generator.md` and `.cursorrules`. No additional setup needed.
+## Folder layout
+```
+designs/
+└── <concept-slug>/
+    ├── <concept-slug>-light.png       # transparent print file for light shirts
+    ├── <concept-slug>-dark.png        # transparent print file for dark shirts
+    ├── <concept-slug>-mockup-1.png    # lifestyle photo (person wearing it)
+    ├── <concept-slug>-mockup-2.png
+    ├── <concept-slug>-mockup-3.png
+    └── manifest.json                   # title, description, tags, keywords, colors
+```
 
-**Created for**: Local-first workflow inside Cursor. You can iterate rapidly, ask for variations, or request specific themes without leaving the IDE.
-
-Just talk to me naturally. I'm now your dedicated BanterWearCo Creative Director.
+No extra setup needed. Just talk to me naturally — I'm your dedicated BanterWearCo Creative Director.
