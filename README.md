@@ -74,33 +74,51 @@ npm run generate -- --output ./new-ideas --count 10
 
 ```
 .
-├── src/
-│   ├── cli.ts          # Main CLI interface
-│   ├── ai.ts           # AI service with BanterWearCo system prompt
-│   ├── types.ts        # Zod schemas for structured output
-├── DESIGN.md           # Architecture and design decisions
-├── PROMPTS.md          # All system and user prompts
-├── AGENTS.md           # Instructions for using as AI coding agent
-├── .cursor/rules/      # Persistent brand voice rules
-├── ideas/              # Generated JSON output (auto-created)
-├── images/             # **Generated DALL-E 3 images saved here** (when using --images)
-├── generated-images/   # Alternative image storage folder
-├── .env.example
+├── src/                    # Optional CLI generator (OpenAI-based; not required for Cursor-native flow)
+│   ├── cli.ts              # Command-line entry
+│   ├── ai.ts               # AI service with BanterWearCo system prompt
+│   └── types.ts            # Zod schemas for structured output
+├── scripts/
+│   ├── finalize-design.mjs # ONE-command pipeline: creates designs/<slug>/, copies PNGs, makes transparent, writes manifest
+│   └── make-transparent.mjs# Converts white/near-white backgrounds to transparent (supports --inplace)
+├── designs/                # One folder per concept (print files, mockups, manifest)
+│   └── <concept-slug>/
+│       ├── <concept-slug>-light.png
+│       ├── <concept-slug>-dark.png
+│       ├── <concept-slug>-mockup-1.png
+│       ├── <concept-slug>-mockup-2.png
+│       ├── <concept-slug>-mockup-3.png
+│       └── manifest.json
+├── .cursor/rules/          # Agent behavior (brand voice + generator rules)
+├── .cursorrules            # Master rule file used by Cursor
+├── DESIGN.md               # Architecture and design decisions
+├── PROMPTS.md              # System and user prompts
+├── AGENTS.md               # Instructions for using this as an AI coding agent
+├── SKILL.md                # Cursor skill description
 └── package.json
 ```
 
-## Printify Workflow (Image-First - Images Saved Locally)
+## Printify Workflow (Cursor-native, asset-first)
 
-1. Run `banter generate --images` → **Images are automatically downloaded and saved to the `./images/` folder**
-2. Review the generated PNG files + the `printReadyPrompt` and `colorStrategy` fields
-3. Test the actual saved images on **both light and dark mockups** in Printify
-4. Use the **title**, **description**, and **tags** directly in your Etsy/Printify listing
-5. The `imagePrompt` field can be used with Flux/Midjourney for variations if needed
-6. Publish and watch the sales roll in!
+Every idea is produced as a self-contained listing package inside its own folder under `designs/<slug>/`:
 
-**All images are saved with clean numbered filenames** (e.g. `01-dinosaur-struggle-is-real.png`) in the `images/` folder in this repository.
+1. Ask Cursor to generate an idea ("create a new design", "give me 3 ideas", etc.)
+2. The agent generates the `-light` + `-dark` print files, runs `scripts/finalize-design.mjs` to save them into `designs/<slug>/` and make them transparent, then generates 1-3 lifestyle mockups of a person wearing the shirt into the same folder
+3. Open `designs/<slug>/` → upload `<slug>-light.png` and `<slug>-dark.png` to Printify, assign each variant to the matching shirt colors listed in the package
+4. Use the mockups from the same folder as Etsy listing photos
+5. Paste the title, description, 13 tags, and keywords from the package (or from `manifest.json`) directly into the Etsy/Printify listing
+6. Publish
 
-**Pro tip**: The new `colorStrategy` field tells you exactly how the design maintains visibility on both black and white garments.
+**Why two variants?** The `-light` file uses darker pigments and black outlines so it reads on white shirts. The `-dark` file uses saturated mid-tone fills (hot pink / neon yellow / electric blue / mint / lime) with black outlines so it pops on black shirts without getting eaten by the transparency pass.
+
+**Manual pipeline (rarely needed):**
+```
+# Make any existing white-background PNG transparent in place
+node scripts/make-transparent.mjs designs/<slug>/<slug>-light.png --inplace
+
+# Re-finalize a folder after generating new assets
+node scripts/finalize-design.mjs <slug>
+```
 
 ## Development
 
