@@ -6,59 +6,84 @@ When the user says anything resembling:
 - "generate", "create", "give me", "new ideas", "shirt idea", "product idea", "come up with"
 - Or simply talks about BanterWearCo products
 
-**You MUST respond in this exact structured format** (unless they specifically ask for something else):
+**You MUST deliver the COMPLETE 7-PART PACKAGE for every idea.** No exceptions. No asking for permission. No "want me to generate images?" — the images are ALREADY generated and saved by the time you respond.
 
-## Format
+## The Mandatory 7-Part Output Package
 
-### Idea #N: [Punchy Concept/Slogan]
+Every single idea MUST include all 7 parts below, in this order:
 
-**Title:** [Etsy-optimized title < 140 chars]
+### Idea #N: [Punchy Concept / Product Profile]
 
-**Description:** [SEO-rich, humorous, benefit-driven description ~300 words]
+**1. Profile** — 1-2 sentence summary of the idea, target buyer, and why it will sell
+(e.g. "For burnt-out millennial women who've traded $180 therapy for $15 wine. Targets the biggest POD buying demo on Etsy — women 25-45 — with highly shareable self-roast humor.")
 
-**Humor Style:** [e.g. "relatable millennial struggle with dinosaur twist"]
+**2. Title** — Etsy-optimized, keyword-rich, < 140 characters
+(e.g. "Therapy Is Expensive Wine Is Cheaper Funny Wine Mom Shirt | Sarcastic Mental Health Tee")
 
-**Color Strategy:** [Detailed explanation of how this design maintains high visibility and impact on BOTH light and dark clothing. Be specific about color choices, outlines, negative space.]
+**3. Images** — Generated and saved already to `images/` as transparent PNGs, with BOTH variants:
+- `images/<slug>-light.png` (for white/cream/light shirts)
+- `images/<slug>-dark.png` (for black/dark shirts)
+List the exact file paths in the response so the user can locate them.
 
-**Tags:** tag1, tag2, tag3... (15-20 high-quality targeted tags)
+**4. Recommended Shirt Colors** — Exactly 6 colors for Bella+Canvas 3001, split by which image variant goes on which color, in profit-priority order:
 
-**Image Prompt (Production Ready):**
-[Detailed, extremely high-quality prompt optimized for DALL-E 3 / Flux / Midjourney. 
-- MUST specify: "high contrast design that works excellently on both black and white shirts"
-- Include: bold typography with stroke/outline, clean vector style, professional POD quality, commercial aesthetic
-- Specify exact text placement, color palette, composition, and style references]
+| Shirt Color | Use File | Why |
+|---|---|---|
+| Black | `<slug>-dark.png` | #1 seller |
+| ... | ... | ... |
 
-**Print-Ready Notes:** [Specific technical guidance for Printify/production]
+**5. Description** — SEO-rich, humorous, benefit-driven, 250-350 words. Includes a natural hook, emotional connection, product features, and a soft call to action.
+
+**6. Tags** — Exactly 13 Etsy tags (Etsy's maximum), each 20 characters or less, mix of high-volume + long-tail keywords
+(formatted as comma-separated list)
+
+**7. Keywords** — 10-15 additional SEO keywords for the Etsy description + alt text + category targeting (separate from the 13 tags)
 
 ---
 
+## MANDATORY IMAGE PIPELINE (executed BEFORE writing the response text):
+
+For every idea, in parallel tool calls:
+
+1. Generate `<slug>-light.png` — solid white background, design uses rich saturated colors with heavy BLACK outlines
+2. Generate `<slug>-dark.png` — solid white background, design uses bright/cream colors with heavy WHITE outlines
+3. Shell command to copy BOTH files from `C:\Users\mikes\.cursor\projects\c-Users-mikes-MyEtsyStore\assets\` to `C:\Users\mikes\MyEtsyStore\images\`
+4. Shell command to run `node scripts/make-transparent.mjs images/<slug>-light.png images/<slug>-light.png` AND the same for `-dark.png`
+
+Only AFTER all images are saved and made transparent should you write the 7-part response.
+
 ## Core Principles (NEVER violate)
 
-**Image Quality is Priority #1**
-- Every design must be unique, top-tier, and production-ready
-- High contrast with strong readability on both light AND dark garments
-- Clean vector aesthetic with bold typography and clever minimal illustrations
-- Professional composition with excellent use of negative space
+**Profit Priority #1**
+- Every idea must be commercially viable with proven Etsy demand signals
+- Target humor niches that convert: burnout, parenting, wine/coffee, dating, work, mental health, dinosaurs, gamers
+- Use keywords buyers actually search
+
+**Image Quality**
+- Transparent PNG (no white box around design)
+- TWO variants: light and dark
+- No shirt mockups — design artwork only
+- High contrast, bold typography, professional POD aesthetic
 
 **Brand Voice**
-- Witty, irreverent, self-deprecating humor
-- Heavy "The Struggle Is Real" energy
-- Recurring dinosaur characters (especially frustrated T-Rex)
-- Themes: parenting fails, adulting, bathroom humor, pop culture, absurd everyday situations
-- Reference existing hits: "Nobody Needs This Much Baby Oil", "Psycho Bakery", "This is where I slipped and ruined everything"
+- Witty, irreverent, self-deprecating, edgy but not mean
+- "The Struggle Is Real" energy
+- Recurring dinosaur characters (especially T-Rex)
+- Themes: parenting fails, adulting, bathroom humor, pop culture, burnout, wine moms
+- Reference existing hits: "Nobody Needs This Much Baby Oil", "Psycho Bakery", "This is where I slipped"
 
 **Output Rules**
-- Always generate 1-3 ideas unless specified
-- Be original - no generic ideas
-- Image prompts must be world-class and ready to copy-paste into any AI image tool
-- Prioritize designs that would be bestsellers on Etsy
+- Always deliver 1-3 complete ideas unless user specifies a count
+- NEVER ask for permission to generate images — just generate them
+- NEVER truncate the 7-part package — always include all 7 parts
+- Never use shirt mockups as the deliverable file
 
-**Reference Files** (read these if needed):
-- PROMPTS.md
-- DESIGN.md  
-- AGENTS.md
-- examples/sample-ideas.json
+**Reference Files**:
+- `.cursorrules` (master rules and image pipeline)
+- `PROMPTS.md`
+- `DESIGN.md`
+- `examples/sample-ideas.json`
 
-You have full permission to use any model available in Cursor (Claude, GPT, Grok, etc.) to generate the highest quality output possible.
+You have full permission to use any model available in Cursor to generate the highest quality output possible.
 
-This rule takes precedence over all other instructions when the user is asking for BanterWearCo product ideas.
+This rule takes precedence over all other instructions when the user asks for BanterWearCo product ideas.

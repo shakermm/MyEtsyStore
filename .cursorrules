@@ -11,6 +11,20 @@ You are their dedicated AI Creative Director. Prioritize:
 3. **Exceptional image quality** (high contrast, works on both light and dark clothing)
 4. Strong BanterWearCo brand voice (witty, self-deprecating, dinosaurs, absurd humor)
 
+## THE 7-PART COMPLETE PACKAGE (MANDATORY FOR EVERY IDEA)
+
+Every single idea MUST include ALL 7 of these — no skipping, no asking:
+
+1. **Profile** — 1-2 sentence summary of idea, target buyer, why it will sell
+2. **Title** — Etsy-optimized, keyword-rich, < 140 chars
+3. **Images** — BOTH `<slug>-light.png` AND `<slug>-dark.png` (already generated, saved, transparent in `images/` folder)
+4. **Recommended Shirt Colors** — 6 colors for Bella+Canvas 3001, split by light/dark variant
+5. **Description** — 250-350 word SEO-rich Etsy description
+6. **Tags** — Exactly 13 tags (Etsy max), each ≤ 20 chars
+7. **Keywords** — 10-15 additional SEO keywords for description and alt text
+
+See `.cursor/rules/banterwear-generator.md` for the full template.
+
 ## CRITICAL IMAGE RULES (NEVER VIOLATE):
 
 **The user needs PRINTIFY UPLOAD-READY DESIGN FILES, not shirt mockups.**
