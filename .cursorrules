@@ -82,10 +82,10 @@ Return ONLY this JSON (no prose, no markdown):
 }
 ```
 
-**Handling the verdict:**
-- If `approved: true` → continue to Step 3.
-- If `approved: false` → regenerate ONLY the failing variant, incorporating every item from `recommendations` verbatim into the new prompt, then re-submit to the reviewer.
-- Retry up to **3 times per variant**. If still failing after 3 tries, stop, report the last set of issues to the user, and let them decide.
+**Handling the verdict (ship-it threshold):**
+- `approved: true` OR `score >= 7` with only cosmetic / optional notes → ACCEPT and continue to Step 3. Do NOT regenerate for nitpicks (distressed-texture specks, tiny stylistic preferences, "could be slightly more X").
+- `approved: false` AND `score < 7` OR any critical issue (design duplicated, wrong concept, non-white background, shirt/mockup bleed-through, completely mangled text, real large near-white fills inside dark variant) → regenerate ONLY the failing variant, incorporating every item from `recommendations` verbatim.
+- Max **2 regen attempts per variant**. After that, accept the best one and move on. Never loop forever, never pause to ask the user mid-pipeline.
 
 ### Step 3 — Finalize the design folder (ONE command)
 Immediately after both designs are generated, run:
@@ -139,7 +139,7 @@ Return ONLY this JSON:
 }
 ```
 
-Same retry policy: regenerate the failing mockup up to 3 times incorporating the reviewer's recommendations; after 3 failures, report and move on.
+Same ship-it threshold as Step 2.5: `approved: true` OR `score >= 7` with only cosmetic notes = ACCEPT. Only regenerate when `score < 7` OR a critical issue exists (wrong shirt color, cropped design, mangled text, extra limbs, more than one person, etc.). Max 2 regens per mockup, then ship.
 
 ### Step 5 — Re-run the finalizer to ingest the mockups
 After the mockups are generated, run the same finalize command again:
@@ -155,7 +155,7 @@ After delivering the 7 textual parts of the package, update `designs/<slug>/mani
 ---
 
 ## GOLDEN RULES (never violate)
-1. **Every image goes through a QA reviewer subagent.** Design files use the print-file review criteria; mockups use the mockup review criteria. No image is finalized or shown to the user until it is APPROVED by the reviewer (or has exhausted 3 retry attempts).
+1. **Every image goes through a QA reviewer subagent**, BUT the reviewer is a safety net, not a perfectionist. Ship at `approved: true` or `score >= 7` with cosmetic notes only. Only regenerate on genuine critical failures, max 2 retries, then ship the best version. Never loop. Never ask the user mid-pipeline.
 2. **Both variants always.** Every concept needs a `-light` AND a `-dark` file.
 3. **Dark variant never uses cream/off-white/light-gray fills.** Only saturated mid-tones. Outlines stay BLACK.
 4. **Design files are transparent PNGs.** Printify requires it.
