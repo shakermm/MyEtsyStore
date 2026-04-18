@@ -33,7 +33,15 @@ List the exact file paths so the user can locate them.
 | Black | `<slug>-dark.png` | #1 bestseller |
 | … | … | … |
 
-**5. Description** — SEO-rich, humorous, benefit-driven, 250-350 words. Include a natural hook, emotional connection, product features, and a soft call to action.
+**5. Description** — SEO-rich, humorous, benefit-driven. Follow this **exact section order** (use headings or clear labels so it pastes cleanly into Etsy):
+
+   1. Creative copy — hook, emotional angle, “Perfect for…” bullets (design-specific).
+   2. **DETAILS** — design-specific bullets (fit, print variants, made-to-order).
+   3. **Product features** — bullets copied **verbatim** from `data/listing-standard.json` → `product_features` (Bella+Canvas 3001 specs, printing, sourcing). Do not invent different specs.
+   4. **Care instructions** — bullets copied **verbatim** from `data/listing-standard.json` → `care_instructions`.
+   5. Closing paragraph — copy **verbatim** from `data/listing-standard.json` → `listing_footer` (“Shipped by BanterWearCo…”).
+
+   Total length typically ~280–450 words including the mandatory blocks. The manifest’s `description` field must contain the **full** listing including features + care + footer; also store `product_features`, `care_instructions`, and `listing_footer` in `manifest.json` for reuse.
 
 **6. Tags** — Exactly 13 Etsy tags (Etsy's maximum), each 20 characters or less, mix of high-volume + long-tail keywords. Comma-separated list.
 
@@ -76,6 +84,8 @@ For every idea:
    ```
 
 Only AFTER all images are saved, made transparent where appropriate, and the manifest is updated should you write the 8-part response.
+
+**Listing standard file:** Shop-wide product specs and care instructions live in **`data/listing-standard.json`**. New design folders get these fields scaffolded when you run `finalize-design.mjs`; existing manifests get them backfilled if missing. Edit that one JSON file to update every future listing at once.
 
 ---
 

@@ -5,7 +5,7 @@
  *   node scripts/make-transparent.mjs <inputPath> [outputPath] [--threshold=240] [--inplace]
  *
  * Defaults:
- *   - outputPath: adds "-transparent" before the extension
+ *   - outputPath: adds "new idea-transparent" before the extension
  *   - threshold: 240 (any pixel where R,G,B are all >= 240 becomes transparent)
  *   - --inplace: overwrite the input file instead of creating a -transparent copy
  *

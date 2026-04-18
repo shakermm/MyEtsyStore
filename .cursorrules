@@ -21,12 +21,22 @@ Every single idea MUST include ALL 8 parts — no skipping, no asking. Deliver t
 2. **Title** — Etsy-optimized, keyword-rich, under 140 chars
 3. **Print files** — BOTH `<slug>-light.png` AND `<slug>-dark.png`, already generated, saved, and made transparent inside `designs/<slug>/`
 4. **Recommended shirt colors** — Exactly 6 Bella+Canvas 3001 colors, split by which variant goes on which color, in profit-priority order
-5. **Description** — 250-350 word SEO-rich Etsy description
+5. **Description** — SEO-rich Etsy listing body (see **Listing body structure** below). Target ~280–450 words total including mandatory standard blocks.
 6. **Tags** — Exactly 13 tags (Etsy's maximum), each ≤ 20 chars
 7. **Keywords** — 10-15 additional SEO keywords for description body + alt text + category targeting
 8. **Mockups** — 1-3 lifestyle mockup images with real people wearing the design, saved in the same `designs/<slug>/` folder
 
 See `.cursor/rules/banterwear-generator.md` for the full template.
+
+### Listing body structure (every description, mandatory order)
+
+1. **Creative / marketing copy** — hook, emotional angle, who it is for, bullet “Perfect for…” (design-specific).
+2. **DETAILS** — design-specific bullets (fit, two print variants, what is on the shirt, made-to-order).
+3. **Product features** — copy **verbatim** from `data/listing-standard.json` → `product_features` (or from `manifest.json` once written). Use a heading such as `Product features` and bullet each line.
+4. **Care instructions** — copy **verbatim** from `data/listing-standard.json` → `care_instructions`. Use a heading such as `Care instructions` and bullet each line.
+5. **Listing footer** — single closing paragraph, copy **verbatim** from `data/listing-standard.json` → `listing_footer` (“Shipped by BanterWearCo…”).
+
+Do not paraphrase the standard product features, care instructions, or footer unless the user updates `data/listing-standard.json`. The same blocks apply to every shirt listing for consistency and compliance.
 
 ---
 
@@ -150,7 +160,14 @@ node scripts/finalize-design.mjs <slug>
 This will pick up the new mockup files, copy them into `designs/<slug>/`, and add their filenames to `manifest.json` without touching the already-transparent design PNGs.
 
 ### Step 6 — Fill in the manifest (recommended)
-After delivering the 7 textual parts of the package, update `designs/<slug>/manifest.json` with `description`, `tags`, `keywords`, and `recommended_shirt_colors`. This keeps each design fully self-contained and re-listable later without reopening the chat.
+After delivering the textual parts of the package, update `designs/<slug>/manifest.json` with:
+- `description` — full Etsy-ready text including Product features, Care instructions, and listing footer (as in **Listing body structure**)
+- `product_features`, `care_instructions`, `listing_footer` — duplicate the standard blocks as structured arrays/string (copy from `data/listing-standard.json`; `node scripts/finalize-design.mjs <slug>` backfills missing keys if absent)
+- `tags`, `keywords`, `recommended_shirt_colors`
+
+This keeps each design self-contained and paste-ready for Etsy / Printify.
+
+To change shop-wide product specs or care text once for all future designs, edit **`data/listing-standard.json`** only.
 
 ---
 

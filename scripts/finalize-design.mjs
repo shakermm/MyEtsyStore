@@ -11,8 +11,11 @@
  *      - <slug>-mockup-2.png   -> lifestyle mockup
  *      - <slug>-mockup-3.png   -> lifestyle mockup
  *   3. Runs make-transparent.mjs --inplace on the -light and -dark PNGs
- *   4. Scaffolds a designs/<slug>/manifest.json if one does not exist yet
- *   5. Prints a summary of everything it did (and what is still missing)
+ *   4. Scaffolds a designs/<slug>/manifest.json if one does not exist yet (includes
+ *      product_features + care_instructions + listing_footer from data/listing-standard.json)
+ *   5. If manifest already exists, backfills missing product_features / care_instructions /
+ *      listing_footer from the same standard file without overwriting custom text
+ *   6. Prints a summary of everything it did (and what is still missing)
  *
  * Usage:
  *   node scripts/finalize-design.mjs <slug> [--assets-dir <path>] [--title "..."] [--concept "..."] [--threshold=240]
@@ -87,6 +90,17 @@ const report = {
   transparencyRuns: [],
 };
 
+const listingStandardPath = join(repoRoot, 'data', 'listing-standard.json');
+function loadListingStandard() {
+  try {
+    if (!existsSync(listingStandardPath)) return null;
+    return JSON.parse(readFileSync(listingStandardPath, 'utf8'));
+  } catch {
+    return null;
+  }
+}
+const listingStandard = loadListingStandard();
+
 function copyIfExists(filename, kind) {
   const src = join(assetsDir, filename);
   const dst = join(designDir, filename);
@@ -126,6 +140,13 @@ if (!existsSync(manifestPath)) {
     tags: [],
     keywords: [],
     recommended_shirt_colors: [],
+    ...(listingStandard
+      ? {
+          product_features: listingStandard.product_features,
+          care_instructions: listingStandard.care_instructions,
+          listing_footer: listingStandard.listing_footer,
+        }
+      : {}),
     files: {
       light: report.copiedDesigns.includes(`${slug}-light.png`) ? `${slug}-light.png` : null,
       dark: report.copiedDesigns.includes(`${slug}-dark.png`) ? `${slug}-dark.png` : null,
@@ -136,10 +157,24 @@ if (!existsSync(manifestPath)) {
   writeFileSync(manifestPath, JSON.stringify(manifest, null, 2) + '\n', 'utf8');
   console.log(`[manifest] wrote ${manifestPath}`);
 } else {
-  console.log(`[manifest] exists, leaving untouched: ${manifestPath}`);
+  console.log(`[manifest] exists: ${manifestPath}`);
   try {
     const existing = JSON.parse(readFileSync(manifestPath, 'utf8'));
     const changed = {};
+    if (listingStandard) {
+      if (!Array.isArray(existing.product_features) || existing.product_features.length === 0) {
+        existing.product_features = listingStandard.product_features;
+        changed.product_features = true;
+      }
+      if (!Array.isArray(existing.care_instructions) || existing.care_instructions.length === 0) {
+        existing.care_instructions = listingStandard.care_instructions;
+        changed.care_instructions = true;
+      }
+      if (existing.listing_footer == null || String(existing.listing_footer).trim() === '') {
+        existing.listing_footer = listingStandard.listing_footer;
+        changed.listing_footer = true;
+      }
+    }
     if (report.copiedDesigns.includes(`${slug}-light.png`)) {
       existing.files = existing.files || {};
       if (existing.files.light !== `${slug}-light.png`) {
