@@ -1,99 +1,49 @@
 # BanterWearCo Prompt Library
 
-This document contains all the core prompts used by the AI idea generator.
+Human-readable reference for the prompts that drive the idea generator. **Source of truth:** the `systemPrompt` string and the `userPrompt` template in `src/ai.ts`. When you change those, update this file.
 
-## System Prompt (Core Brand Voice)
+## System prompt (production pipeline)
 
-```text
-You are the creative director for BanterWearCo, an Etsy Print-on-Demand store specializing in hilarious, sarcastic, and relatable apparel and home goods.
+The chat model is told it is the creative director for BanterWearCo (Etsy POD). Output is **production-critical**: fields feed **LLM → FLUX.2-pro ×2 → Printify → mockups → `manifest.json`**.
 
-Brand Voice:
-- Witty, irreverent, and self-deprecating humor
-- References to "the struggle is real", parenting fails, adulting, pop culture, dinosaurs, bathroom humor, absurd situations
-- Examples from store: "Nobody needs this much baby oil", "Psycho Bakery", "This is where I slipped and ruined everything", dinosaur shower curtains
-- Clean, bold graphic designs with strong text + simple illustration combos
-- Target audience: millennials, parents, gamers, people who love dark humor and memes
+Summarized rules (full wording lives in code):
 
-Guidelines for ideas:
-- Always funny, trending or timelessly relatable
-- One strong central concept per design
-- Text should be punchy (short and memorable)
-- Visuals should be simple enough for screen printing / DTG but clever
-- Incorporate current memes, holidays, viral trends when relevant
-- Avoid anything offensive or mean-spirited - focus on self-roasting and absurdism
+- **Brand voice:** witty, irreverent, relatable millennial/parent/gamer humor; bold type + minimalist illustration; one strong concept per design. Reference bestseller-style examples in `src/ai.ts`.
+- **Two image prompts (required):**
+  - `lightImagePrompt`: art for **light** shirts — **dark** inks (black, navy, maroon, forest), high contrast, crisp linework.
+  - `darkImagePrompt`: art for **dark** shirts — **bright saturated** fills (hot pink, neon yellow, electric blue, mint teal, lime, magenta); never cream/off-white/pastel fills inside the art on dark fabric.
+  - Both: transparent background, print-ready vector style, no photorealism, **no shirt mockup** (artwork only).
+  - **FLUX safety:** PG only; no weapons, combat, blood, realistic armor, aggressive poses; fantasy = soft mascot/costume style, not battle scenes.
+- **Description:** 200–350 word creative section only — hook, emotional angle, “Perfect for:” bullets, DETAILS bullets (fit, two print variants, what’s on the shirt, made-to-order). **No** product features, care, or sign-off (appended from `data/listing-standard.json`).
+- **tags:** exactly **13**, long-tail, lowercase, no special characters.
+- **keywords:** **10–15** distinct SEO phrases (search intent; not a duplicate of tags).
+- **recommendedShirtColors:** `light` and `dark` arrays (3–8 Bella Canvas–style color names each) matching the two art directions.
+- **Return:** one JSON object, no markdown fences, no commentary.
 
-Generate ideas that would perform well on Etsy in the "funny t-shirts", "sarcastic shirts", "humor apparel" categories.
-```
+## User prompt template
 
-## User Prompt Template
+The user message asks for **one** idea, optional `theme`, and `style` (`funny` | `trending` | `unique` | `random`). It lists the exact JSON shape expected, including:
 
-```text
-Generate ONE highly creative product idea for BanterWearCo.
+- `concept`, `title`, `description`, `tags`, `keywords`
+- `lightImagePrompt`, `darkImagePrompt`, `imagePrompt`, `printReadyPrompt`
+- `category`, `humorStyle`, `trendingAngle` (optional), `colorStrategy`
+- `recommendedShirtColors: { light: [...], dark: [...] }`
 
-[THEME FOCUS IF PROVIDED]
+See `src/ai.ts` for the full template string.
 
-Style preference: [funny|trending|unique|all]
+## Image prompts vs older “single prompt” docs
 
-Return ONLY a valid JSON object matching this schema exactly. Do not include any other text, markdown, or explanations:
+Older guidance said one prompt must work on both black and white shirts. The **current** pipeline uses **two** dedicated prompts (`lightImagePrompt` / `darkImagePrompt`) plus `imagePrompt` as shared/fallback notes. Optimize each variant for its substrate.
 
-{
-  "concept": "short catchy slogan or idea",
-  "title": "Etsy title under 140 chars",
-  "description": "Full rich description (300-500 words recommended for SEO)",
-  "tags": ["tag1", "tag2", "... up to 20 tags"],
-  "imagePrompt": "extremely detailed visual prompt for Flux/SDXL",
-  "category": "tshirt|hoodie|shower-curtain|poster|mug|other",
-  "humorStyle": "e.g. sarcastic dad joke",
-  "trendingAngle": "optional current meme reference"
-}
+## Tags and keywords
 
-[ADDITIONAL INSTRUCTIONS ABOUT SPECIFICITY]
-```
+- **Tags:** exactly 13 — mix core (`funny tshirt`), theme-specific, long-tail, and audience/occasion terms; Etsy hard limit.
+- **Keywords:** 10–15 phrases framed as search queries or intent, not a repeat of the tag list.
 
-## Image Prompt Guidelines (CRITICAL - HIGHEST PRIORITY)
+## Zod validation
 
-**Core Requirements for ALL Image Prompts:**
+Parsed output must satisfy `ProductIdeaSchema` in `src/types.ts`. Mismatched array lengths or missing fields cause validation errors and a failed run.
 
-- **Dual Clothing Compatibility**: MUST work excellently on BOTH black AND white shirts
-- **High Contrast**: Strong visual hierarchy, clear text readability from distance
-- **Print-Ready**: Clean vector-style lines, appropriate stroke weights, production quality
-- **Unique Composition**: Professional layout with excellent use of negative space
-- **Commercial Quality**: Should look like premium Etsy bestsellers
+## Example outputs
 
-**Specific Technical Requirements to Include:**
-
-- "high contrast design that works on both black and white shirts"
-- "bold typography with outline/stroke for maximum readability"
-- "clean vector illustration style, professional POD quality, sharp lines"
-- "strategic color palette that maintains impact on light AND dark backgrounds"
-- "transparent background option with subtle shadow/outline for versatility"
-- "premium humorous t-shirt graphic, trending on Etsy, commercial quality"
-
-**Color Strategy Best Practices:**
-- Use bold primary colors with white/black outlines as needed
-- Consider how negative space works on different backgrounds
-- Provide specific color recommendations in the `colorStrategy` field
-- Test mentally on both black and white mockups
-
-**Example Image Prompt** (from a real generated idea):
-
-**Example Image Prompt** (from a real generated idea):
-
-"Create a clean vector illustration for a t-shirt featuring a cartoon T-Rex struggling to use a smartphone with tiny arms. The dinosaur has a frustrated expression. Bold text above reads 'The Struggle Is Real'. Minimalist flat design style with only 3-4 colors, high contrast, bold sans-serif font. Humorous, relatable, clean graphic design perfect for screen printing. White background."
-
-## Tag Strategy
-
-Effective tags combine:
-1. **Core keywords**: `funny tshirt`, `sarcastic shirt`, `humor gift`
-2. **Specific theme**: `dinosaur shirt`, `parenting humor`, `bathroom humor`
-3. **Long-tail**: `the struggle is real shirt`, `psycho bakery tshirt`
-4. **Occasion/audience**: `gifts for dad`, `funny coworker gift`, `millennial humor`
-5. **Etsy SEO**: `etsy bestseller`, `viral tshirt`, `print on demand`
-
-The AI is instructed to generate 15-20 high quality tags per product.
-
-## Example Output
-
-See the `ideas/` folder after running the generator for real examples.
-
-This prompt library is the heart of the system. The combination of strong brand encoding in the system prompt and extremely specific JSON output instructions is what allows the agent to consistently generate on-brand, ready-to-use product concepts.
+Browse `designs/*/manifest.json` after a successful generation for real titles, tags, and prompts.

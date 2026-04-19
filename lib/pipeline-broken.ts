@@ -11,7 +11,6 @@ import {
   uniqueSlug,
   writeDesignFile,
   writeManifest,
-  readDesignBuffer,
 } from './storage';
 import { ensureTransparentPng } from './transparency';
 import { envStatus } from './env';
@@ -131,7 +130,6 @@ export async function* runPipeline(input: RunPipelineInput): AsyncGenerator<Pipe
   const mockupsPerVariant = input.mockupsPerVariant ?? DEFAULT_MOCKUPS_PER_VARIANT;
 
   if (!input.skipPrintify && env.printify) {
-    // Upload images first
     for (const v of variants) {
       const filename = designFiles[v];
       if (!filename) continue;
@@ -148,9 +146,8 @@ export async function* runPipeline(input: RunPipelineInput): AsyncGenerator<Pipe
         yield { type: 'error', step: `printify.upload.${v}`, message: stringifyError(err) };
         continue;
       }
-    }
 
-    // Create products if requested
+    // 4. Create actual Printify products if requested
     if (input.createProducts && printifyImageIds.light && printifyImageIds.dark) {
       yield { type: 'printify.products.start' };
       try {
@@ -165,7 +162,22 @@ export async function* runPipeline(input: RunPipelineInput): AsyncGenerator<Pipe
       }
     }
 
-    // Generate mockups
+    // 4. Create actual Printify products if requested (after both uploads complete)
+    if (input.createProducts && printifyImageIds.light && printifyImageIds.dark) {
+      yield { type: 'printify.products.start' };
+      try {
+        const products = await createProduct(idea, printifyImageIds.light, printifyImageIds.dark, {
+          publish: input.publishProducts,
+        });
+        printifyProducts.push(...products);
+        const productIds = products.map(p => p.id);
+        yield { type: 'printify.products.done', count: products.length, productIds };
+      } catch (err) {
+        yield { type: 'error', step: 'printify.products', message: stringifyError(err) };
+      }
+    }
+
+    // 5. Generate mockups (for both product creation and mockup-only modes)
     for (const v of variants) {
       const imageId = printifyImageIds[v];
       if (!imageId) continue;
@@ -232,13 +244,169 @@ function assembleDescription(
   idea: ProductIdea,
   standard: { product_features: string[]; care_instructions: string[]; listing_footer: string }
 ): string {
-  return idea.description + '\n\n' + 
-         standard.product_features.join('\n') + '\n\n' +
-         standard.care_instructions.join('\n') + '\n\n' +
-         standard.listing_footer;
+  const parts: string[] = [idea.description.trim()];
+  parts.push('');
+  parts.push('Product features');
+  parts.push(...standard.product_features.map(b => `• ${b}`));
+  parts.push('');
+  parts.push('Care instructions');
+  parts.push(...standard.care_instructions.map(b => `• ${b}`));
+  parts.push('');
+  parts.push(standard.listing_footer);
+  return parts.join('\n');
+}
+
+async function readDesignBuffer(slug: string, filename: string): Promise<Buffer> {
+  const { promises: fs } = await import('fs');
+  const path = await import('path');
+  return fs.readFile(path.join(process.cwd(), 'designs', slug, filename));
 }
 
 function stringifyError(err: unknown): string {
   if (err instanceof Error) return err.message;
-  return String(err);
+  if (typeof err === 'string') return err;
+  try {
+    return JSON.stringify(err);
+  } catch {
+    return 'Unknown error';
+  }
+}
+
+// ---------- Per-step regenerate helpers (used by /api/designs/[slug]) ----------
+
+export async function* regenerateVariant(
+  slug: string,
+  variant: 'light' | 'dark'
+): AsyncGenerator<PipelineEvent> {
+  const env = envStatus();
+  if (!env.flux) {
+    yield { type: 'error', step: 'env', message: 'FLUX not configured' };
+    return;
+  }
+  const manifest = await readManifest(slug);
+  if (!manifest) {
+    yield { type: 'error', step: 'manifest', message: `No manifest for ${slug}` };
+    return;
+  }
+
+  const usage = await readUsage();
+  if (usage.fluxCalls + 1 > env.fluxDailyCap) {
+    yield { type: 'error', step: 'budget', message: `Daily FLUX cap reached.` };
+    return;
+  }
+
+  // Reload the original idea-shaped fields from the manifest. We only have a partial
+  // copy in the manifest (no light/dark prompts), so regeneration uses a synthetic
+  // prompt built from the title + concept + colorway hint.
+  yield { type: 'flux.start', variant };
+  const palette =
+    variant === 'light'
+      ? 'dark inks (black, deep navy, maroon, forest green) on a transparent background, high contrast for white/cream/heather shirts'
+      : 'bright saturated fills (hot pink, neon yellow, electric blue, mint teal, lime green, magenta) on a transparent background — NEVER cream/off-white inside the design — for black/navy/asphalt shirts';
+  const prompt = `${manifest.concept}\n\nTitle: ${manifest.title}\n\nPalette: ${palette}\n\nVector style, premium humorous t-shirt graphic, isolated artwork only.`;
+
+  try {
+    const result = await generateFluxBuffer(prompt, { transparent: true });
+    await bumpFluxCalls(1);
+    const transparent = await ensureTransparentPng(result.buffer);
+    const filename = `${slug}-${variant}.png`;
+    await writeDesignFile(slug, filename, transparent);
+    manifest.files[variant] = filename;
+    await writeManifest(manifest);
+    yield { type: 'flux.done', variant, file: filename };
+    yield { type: 'manifest.write', slug };
+    yield { type: 'done', slug };
+  } catch (err) {
+    yield { type: 'error', step: `flux.${variant}`, message: stringifyError(err) };
+  }
+}
+
+export async function* regenerateMockups(slug: string): AsyncGenerator<PipelineEvent> {
+  const env = envStatus();
+  if (!env.printify) {
+    yield { type: 'error', step: 'env', message: 'Printify not configured' };
+    return;
+  }
+  const manifest = await readManifest(slug);
+  if (!manifest) {
+    yield { type: 'error', step: 'manifest', message: `No manifest for ${slug}` };
+    return;
+  }
+
+  manifest.mockups = [];
+  manifest.printify_mockups = [];
+
+  for (const variant of ['light', 'dark'] as const) {
+    const filename = manifest.files[variant];
+    const imageId = manifest.printify_image_ids[variant];
+    if (!filename) continue;
+
+    let id = imageId;
+    if (!id) {
+      yield { type: 'printify.upload.start', variant };
+      try {
+        const buffer = await readDesignBuffer(slug, filename);
+        const upload = await uploadImageBase64(filename, buffer);
+        id = upload.id;
+        manifest.printify_image_ids[variant] = id;
+        yield { type: 'printify.upload.done', variant, imageId: id };
+      } catch (err) {
+        yield { type: 'error', step: `printify.upload.${variant}`, message: stringifyError(err) };
+        continue;
+      }
+    }
+
+    yield { type: 'printify.mockups.start', variant };
+    try {
+      const set = await generateMockups({
+        uploadedImageId: id!,
+        variant,
+        title: manifest.title,
+        description: manifest.concept,
+      });
+      manifest.printify_mockups.push(set);
+      const buffers = await downloadMockupImages(set, DEFAULT_MOCKUPS_PER_VARIANT);
+      for (const buffer of buffers) {
+        const mockupFilename = `${slug}-mockup-${manifest.mockups.length + 1}.png`;
+        await writeDesignFile(slug, mockupFilename, buffer);
+        manifest.mockups.push(mockupFilename);
+      }
+      yield { type: 'printify.mockups.done', variant, count: buffers.length };
+    } catch (err) {
+      yield { type: 'error', step: `printify.mockups.${variant}`, message: stringifyError(err) };
+    }
+  }
+
+  await writeManifest(manifest);
+  yield { type: 'manifest.write', slug };
+  yield { type: 'done', slug };
+}
+
+export async function* uploadToPrintify(slug: string): AsyncGenerator<PipelineEvent> {
+  const env = envStatus();
+  if (!env.printify) {
+    yield { type: 'error', step: 'env', message: 'Printify not configured' };
+    return;
+  }
+  const manifest = await readManifest(slug);
+  if (!manifest) {
+    yield { type: 'error', step: 'manifest', message: `No manifest for ${slug}` };
+    return;
+  }
+  for (const variant of ['light', 'dark'] as const) {
+    const filename = manifest.files[variant];
+    if (!filename) continue;
+    yield { type: 'printify.upload.start', variant };
+    try {
+      const buffer = await readDesignBuffer(slug, filename);
+      const upload = await uploadImageBase64(filename, buffer);
+      manifest.printify_image_ids[variant] = upload.id;
+      yield { type: 'printify.upload.done', variant, imageId: upload.id };
+    } catch (err) {
+      yield { type: 'error', step: `printify.upload.${variant}`, message: stringifyError(err) };
+    }
+  }
+  await writeManifest(manifest);
+  yield { type: 'manifest.write', slug };
+  yield { type: 'done', slug };
 }

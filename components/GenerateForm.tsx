@@ -10,11 +10,27 @@ interface GenerateFormProps {
   printifyReady: boolean;
 }
 
+const PRODUCT_CATEGORIES = [
+  { value: 'tshirt', label: 'T-Shirt' },
+  { value: 'hoodie', label: 'Hoodie' },
+  { value: 'sweatshirt', label: 'Sweatshirt' },
+  { value: 'mug', label: 'Mug' },
+  { value: 'poster', label: 'Poster' },
+  { value: 'shower-curtain', label: 'Shower Curtain' },
+  { value: 'phone-case', label: 'Phone Case' },
+  { value: 'tote-bag', label: 'Tote Bag' },
+  { value: 'pillow', label: 'Pillow' },
+  { value: 'other', label: 'Other' },
+];
+
 export default function GenerateForm({ llmReady, fluxReady, printifyReady }: GenerateFormProps) {
   const router = useRouter();
   const [theme, setTheme] = useState('');
   const [style, setStyle] = useState<'funny' | 'trending' | 'unique' | 'random'>('random');
+  const [category, setCategory] = useState<string>('tshirt');
   const [mockupsPerVariant, setMockupsPerVariant] = useState(2);
+  const [createProducts, setCreateProducts] = useState(false);
+  const [publishProducts, setPublishProducts] = useState(false);
   const [running, setRunning] = useState(false);
   const [bodyKey, setBodyKey] = useState(0);
 
@@ -28,7 +44,7 @@ export default function GenerateForm({ llmReady, fluxReady, printifyReady }: Gen
 
   return (
     <div className="space-y-4">
-      <div className="grid grid-cols-1 gap-3 sm:grid-cols-[1fr_180px_140px_auto]">
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-[1fr_120px_120px_100px_auto]">
         <input
           value={theme}
           onChange={e => setTheme(e.target.value)}
@@ -36,6 +52,16 @@ export default function GenerateForm({ llmReady, fluxReady, printifyReady }: Gen
           disabled={running}
           className="rounded-md border border-neutral-700 bg-neutral-950 px-3 py-2 text-sm placeholder:text-neutral-500 focus:border-fuchsia-400 focus:outline-none"
         />
+        <select
+          value={category}
+          onChange={e => setCategory(e.target.value)}
+          disabled={running}
+          className="rounded-md border border-neutral-700 bg-neutral-950 px-3 py-2 text-sm"
+        >
+          {PRODUCT_CATEGORIES.map(cat => (
+            <option key={cat.value} value={cat.value}>{cat.label}</option>
+          ))}
+        </select>
         <select
           value={style}
           onChange={e => setStyle(e.target.value as typeof style)}
@@ -53,10 +79,10 @@ export default function GenerateForm({ llmReady, fluxReady, printifyReady }: Gen
           disabled={running}
           className="rounded-md border border-neutral-700 bg-neutral-950 px-3 py-2 text-sm"
         >
-          <option value={1}>1 mockup/variant</option>
-          <option value={2}>2 mockups/variant</option>
-          <option value={3}>3 mockups/variant</option>
-          <option value={4}>4 mockups/variant</option>
+          <option value={1}>1 mockup</option>
+          <option value={2}>2 mockups</option>
+          <option value={3}>3 mockups</option>
+          <option value={4}>4 mockups</option>
         </select>
         <button
           type="button"
@@ -67,6 +93,36 @@ export default function GenerateForm({ llmReady, fluxReady, printifyReady }: Gen
           {running ? 'Generating...' : 'Generate'}
         </button>
       </div>
+
+      {/* Product Creation Options */}
+      {printifyReady && (
+        <div className="rounded-md border border-neutral-800 bg-neutral-900/50 p-3">
+          <div className="flex items-center gap-6 text-sm">
+            <label className="flex items-center gap-2">
+              <input
+                type="checkbox"
+                checked={createProducts}
+                onChange={e => setCreateProducts(e.target.checked)}
+                disabled={running}
+                className="rounded border-neutral-600 bg-neutral-800 text-fuchsia-500 focus:ring-fuchsia-500 focus:ring-offset-0"
+              />
+              <span className="text-neutral-300">Create actual Printify products</span>
+            </label>
+            {createProducts && (
+              <label className="flex items-center gap-2">
+                <input
+                  type="checkbox"
+                  checked={publishProducts}
+                  onChange={e => setPublishProducts(e.target.checked)}
+                  disabled={running}
+                  className="rounded border-neutral-600 bg-neutral-800 text-fuchsia-500 focus:ring-fuchsia-500 focus:ring-offset-0"
+                />
+                <span className="text-neutral-300">Publish products</span>
+              </label>
+            )}
+          </div>
+        </div>
+      )}
 
       {blocked && (
         <p className="text-xs text-amber-400">
@@ -79,8 +135,8 @@ export default function GenerateForm({ llmReady, fluxReady, printifyReady }: Gen
         <ProgressStream
           key={bodyKey}
           url="/api/generate"
-          body={{ theme, style, mockupsPerVariant }}
-          startLabel={`Generating: theme="${theme || '(random)'}", style=${style}`}
+          body={{ theme, style, category, mockupsPerVariant, createProducts, publishProducts }}
+          startLabel={`Generating: theme="${theme || '(random)'}", style=${style}, category=${category}`}
           onDone={slug => {
             setRunning(false);
             if (slug) {

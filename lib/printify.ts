@@ -1,6 +1,6 @@
 import 'server-only';
 import { requirePrintify } from './env';
-import type { PrintifyMockupImage, PrintifyMockupSet } from '@/src/types';
+import type { PrintifyMockupImage, PrintifyMockupSet, PrintifyProduct, ProductIdea } from '@/src/types';
 
 const BASE = 'https://api.printify.com/v1';
 
@@ -115,15 +115,75 @@ export async function listVariants(blueprintId: number, providerId: number): Pro
   );
 }
 
-const LIGHT_COLORS = ['white', 'natural', 'heather prism natural', 'ash', 'soft cream', 'heather dust'];
-const DARK_COLORS = ['black', 'navy', 'asphalt', 'forest', 'true royal', 'dark heather'];
+// Product type to blueprint ID mappings
+export const PRODUCT_BLUEPRINTS: Record<string, number> = {
+  'tshirt': 6, // Gildan 5000 - Unisex Heavy Cotton Tee
+  'hoodie': 8, // Gildan 18500 - Unisex Heavy Blend Hoodie
+  'sweatshirt': 18, // Gildan 18000 - Unisex Heavy Blend Crewneck Sweatshirt
+  'mug': 21, // Generic brand Ceramic Mug
+  'poster': 1130, // Generic brand Framed Posters, Matte
+  'shower-curtain': 4, // Shower Curtain
+  'phone-case': 14, // Phone Case
+  'tote-bag': 20, // Tote Bag
+  'pillow': 16, // Throw Pillow
+  'other': 6, // Default to tshirt
+};
+
+// Product-specific color palettes
+const PRODUCT_COLORS = {
+  'tshirt': {
+    light: ['white', 'natural', 'heather prism natural', 'ash', 'soft cream', 'heather dust'],
+    dark: ['black', 'navy', 'asphalt', 'forest', 'true royal', 'dark heather']
+  },
+  'hoodie': {
+    light: ['white', 'sand', 'heather grey', 'light pink', 'light blue'],
+    dark: ['black', 'navy', 'charcoal', 'forest green', 'burgundy']
+  },
+  'sweatshirt': {
+    light: ['white', 'natural', 'heather grey', 'sand', 'cream'],
+    dark: ['black', 'navy', 'forest', 'charcoal', 'maroon']
+  },
+  'mug': {
+    light: ['white', 'cream', 'light gray'],
+    dark: ['black', 'navy', 'dark blue', 'dark gray']
+  },
+  'poster': {
+    light: ['white', 'cream', 'light gray'],
+    dark: ['black', 'dark gray', 'navy']
+  },
+  'shower-curtain': {
+    light: ['white', 'cream', 'light gray'],
+    dark: ['black', 'navy', 'dark gray']
+  },
+  'phone-case': {
+    light: ['white', 'clear', 'light gray'],
+    dark: ['black', 'dark blue', 'dark gray']
+  },
+  'tote-bag': {
+    light: ['natural', 'white', 'cream', 'light gray'],
+    dark: ['black', 'navy', 'dark gray', 'forest']
+  },
+  'pillow': {
+    light: ['white', 'cream', 'light gray', 'beige'],
+    dark: ['black', 'navy', 'dark gray', 'burgundy']
+  },
+  'other': {
+    light: ['white', 'natural', 'heather prism natural', 'ash'],
+    dark: ['black', 'navy', 'asphalt', 'forest']
+  }
+};
+
+const LIGHT_COLORS = PRODUCT_COLORS.tshirt.light;
+const DARK_COLORS = PRODUCT_COLORS.tshirt.dark;
 
 export function pickVariantByPalette(
   variants: PrintifyVariant[],
   palette: 'light' | 'dark',
+  productType: string = 'tshirt',
   preferredSize = 'M'
 ): PrintifyVariant | undefined {
-  const targets = palette === 'light' ? LIGHT_COLORS : DARK_COLORS;
+  const colors = PRODUCT_COLORS[productType as keyof typeof PRODUCT_COLORS] || PRODUCT_COLORS.other;
+  const targets = palette === 'light' ? colors.light : colors.dark;
   const sized = variants.filter(v => (v.options.size || '').toLowerCase() === preferredSize.toLowerCase());
   const pool = sized.length ? sized : variants;
   for (const target of targets) {
@@ -154,9 +214,136 @@ export interface PrintifyProductResponse {
   images: PrintifyMockupImage[];
 }
 
-export async function createDraftProduct(input: CreateProductInput): Promise<PrintifyProductResponse> {
+export async function createProduct(
+  idea: ProductIdea,
+  lightImageId: string,
+  darkImageId: string,
+  options: {
+    publish?: boolean;
+    blueprintIdOverride?: number;
+    providerIdOverride?: number;
+  } = {}
+): Promise<PrintifyProduct[]> {
   const { shopId } = requirePrintify();
-  return pf<PrintifyProductResponse>('POST', `/shops/${shopId}/products.json`, input);
+  const products: PrintifyProduct[] = [];
+  
+  // Get blueprint ID for the product category
+  const blueprintId = options.blueprintIdOverride ?? idea.printifyBlueprintId ?? PRODUCT_BLUEPRINTS[idea.category] ?? PRODUCT_BLUEPRINTS.tshirt;
+  const providerId = options.providerIdOverride ?? await resolveDefaultProviderId(blueprintId);
+  
+  // Get variants for this blueprint
+  const variantsResp = await listVariants(blueprintId, providerId);
+  
+  // Create products for both light and dark variants
+  for (const [imageKey, imageId] of Object.entries({ light: lightImageId, dark: darkImageId })) {
+    const variant = pickVariantByPalette(variantsResp.variants, imageKey as 'light' | 'dark', idea.category);
+    if (!variant) {
+      console.warn(`No suitable variant found for ${imageKey} ${idea.category}`);
+      continue;
+    }
+
+    // Calculate pricing based on product type and target price
+    const basePrice = getBasePriceForProduct(idea.category);
+    const finalPrice = idea.targetPrice || basePrice;
+
+    const productInput: CreateProductInput = {
+      title: idea.title.slice(0, 140),
+      description: idea.description.slice(0, 500),
+      blueprint_id: blueprintId,
+      print_provider_id: providerId,
+      variants: [{ id: variant.id, price: finalPrice, is_enabled: true }],
+      print_areas: [
+        {
+          variant_ids: [variant.id],
+          placeholders: [
+            {
+              position: getDefaultPrintPosition(idea.category),
+              images: [{ id: imageId, x: 0.5, y: 0.5, scale: getScaleForProduct(idea.category), angle: 0 }],
+            },
+          ],
+        },
+      ],
+    };
+
+    const product = await pf<PrintifyProduct>('POST', `/shops/${shopId}/products.json`, productInput);
+    
+    // Publish if requested
+    if (options.publish) {
+      try {
+        await pf('PUT', `/shops/${shopId}/products/${product.id}/publish.json`);
+        product.published_at = new Date().toISOString();
+      } catch (error) {
+        console.warn(`Failed to publish product ${product.id}:`, error);
+      }
+    }
+    
+    products.push(product);
+  }
+  
+  return products;
+}
+
+function getBasePriceForProduct(category: string): number {
+  const basePrices: Record<string, number> = {
+    'tshirt': 2499, // $24.99
+    'hoodie': 4499, // $44.99
+    'sweatshirt': 3999, // $39.99
+    'mug': 1499, // $14.99
+    'poster': 1999, // $19.99
+    'shower-curtain': 3499, // $34.99
+    'phone-case': 2499, // $24.99
+    'tote-bag': 1999, // $19.99
+    'pillow': 2499, // $24.99
+    'other': 2499,
+  };
+  return basePrices[category] || basePrices.other;
+}
+
+function getDefaultPrintPosition(category: string): string {
+  const positions: Record<string, string> = {
+    'tshirt': 'front',
+    'hoodie': 'front',
+    'sweatshirt': 'front',
+    'mug': 'center',
+    'poster': 'center',
+    'shower-curtain': 'center',
+    'phone-case': 'back',
+    'tote-bag': 'front',
+    'pillow': 'front',
+    'other': 'front',
+  };
+  return positions[category] || 'front';
+}
+
+function getScaleForProduct(category: string): number {
+  const scales: Record<string, number> = {
+    'tshirt': 1.0,
+    'hoodie': 1.1,
+    'sweatshirt': 1.1,
+    'mug': 0.8,
+    'poster': 1.2,
+    'shower-curtain': 1.5,
+    'phone-case': 0.9,
+    'tote-bag': 1.0,
+    'pillow': 1.3,
+    'other': 1.0,
+  };
+  return scales[category] || 1.0;
+}
+
+export async function updateProduct(productId: string, updates: Partial<CreateProductInput>): Promise<PrintifyProduct> {
+  const { shopId } = requirePrintify();
+  return pf<PrintifyProduct>('PUT', `/shops/${shopId}/products/${productId}.json`, updates);
+}
+
+export async function getProduct(productId: string): Promise<PrintifyProduct> {
+  const { shopId } = requirePrintify();
+  return pf<PrintifyProduct>('GET', `/shops/${shopId}/products/${productId}.json`);
+}
+
+export async function listProducts(limit = 20): Promise<PrintifyProduct[]> {
+  const { shopId } = requirePrintify();
+  return pf<PrintifyProduct[]>('GET', `/shops/${shopId}/products.json?limit=${limit}`);
 }
 
 export async function deleteProduct(productId: string): Promise<void> {

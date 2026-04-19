@@ -28,9 +28,9 @@ Brand Voice:
 - Clean bold typography + minimalist illustration. Strong central concept per design.
 
 TWO IMAGE PROMPTS (CRITICAL — both go to FLUX.2-pro):
-- lightImagePrompt: design printed on LIGHT shirts (white, cream, heather). Use DARK inks: black, deep navy, maroon, forest green. High contrast, crisp linework.
-- darkImagePrompt: design printed on DARK shirts (black, navy, asphalt, forest). Use BRIGHT SATURATED fills: hot pink, neon yellow, electric blue, mint teal, lime green, magenta. NEVER cream / off-white / pastel inside the design — they look dirty on dark fabric.
-- BOTH prompts must specify: transparent background, print-ready vector style, no photorealism, no shirt mockup in the image (just the artwork itself).
+- lightImagePrompt: design printed on LIGHT products (white, cream, heather, light colors). Use DARK inks: black, deep navy, maroon, forest green. High contrast, crisp linework. Consider the product type - mugs need center-focused designs, posters can be larger, phone cases need compact layouts.
+- darkImagePrompt: design printed on DARK products (black, navy, dark colors). Use BRIGHT SATURATED fills: hot pink, neon yellow, electric blue, mint teal, lime green, magenta. NEVER cream / off-white / pastel fills inside the design — they look dirty on dark surfaces. Adjust for product type - shower curtains can be larger, mugs need centered designs, apparel needs appropriate sizing.
+- BOTH prompts must specify: transparent background, print-ready vector style, no photorealism, no product mockup in the image (just the artwork itself).
 - FLUX SAFETY: PG-rated only. No weapons, combat, blood, realistic armor, aggressive poses. For fantasy figures use soft mascot / plush / costume style — never swords, never battle poses.
 
 DESCRIPTION RULES:
@@ -41,9 +41,15 @@ TAGS & KEYWORDS:
 - tags: EXACTLY 13 (Etsy hard limit). Long-tail, lowercase, no special chars.
 - keywords: 10-15 distinct SEO phrases (different angle than tags — search intent style).
 
-RECOMMENDED SHIRT COLORS:
-- light: 4-6 light Bella Canvas colors that pair with the dark-ink design
-- dark: 4-6 dark Bella Canvas colors that pair with the bright-fill design
+CATEGORY & PRODUCT TYPE:
+- Choose from: tshirt, hoodie, sweatshirt, mug, poster, shower-curtain, phone-case, tote-bag, pillow, other
+- Design should be appropriate for the product type (scale, layout, positioning)
+- Consider how the design will look on the actual product surface
+
+RECOMMENDED PRODUCT COLORS:
+- light: 4-6 light colors that work with the dark-ink design and product type
+- dark: 4-6 dark colors that work with the bright-fill design and product type
+- Use appropriate color names for the product category (e.g., "ceramic white" for mugs, "canvas white" for totes)
 
 Return ONE valid JSON object. No markdown fences. No commentary.`;
   }
@@ -69,14 +75,16 @@ Return ONLY this JSON shape — every field required unless marked optional:
   "darkImagePrompt": "FLUX prompt for the DARK-shirt variant — bright saturated fills (hot pink/neon yellow/electric blue/mint teal/lime/magenta), transparent background, vector style",
   "imagePrompt": "Shared concept summary (used as fallback)",
   "printReadyPrompt": "POD print specs: typography, stroke weights, palette",
-  "category": "tshirt",
+  "category": "tshirt|hoodie|sweatshirt|mug|poster|shower-curtain|phone-case|tote-bag|pillow|other",
   "humorStyle": "e.g. sarcastic dad joke, relatable burnout",
   "trendingAngle": "optional meme/trend tie-in",
-  "colorStrategy": "How the design pops on both light and dark variants",
-  "recommendedShirtColors": {
+  "colorStrategy": "How the design pops on both light and dark variants for this product type",
+  "recommendedProductColors": {
     "light": ["White", "Natural", "Heather Dust", "Ash"],
     "dark": ["Black", "Navy", "Asphalt", "Forest"]
-  }
+  },
+  "printifyBlueprintId": 12345, // Optional specific blueprint ID
+  "targetPrice": 2499 // Optional target price in cents
 }`;
 
     try {
