@@ -488,6 +488,61 @@ export async function deleteProduct(productId: string): Promise<void> {
   await pf('DELETE', `/shops/${shopId}/products/${productId}.json`);
 }
 
+interface PrintifyProductWithPrintAreas extends PrintifyProduct {
+  print_areas?: Array<{
+    variant_ids: number[];
+    placeholders: Array<{
+      position: string;
+      images: Array<{ id: string; x: number; y: number; scale: number; angle: number; type?: string }>;
+    }>;
+  }>;
+}
+
+/**
+ * Swap every image reference in an existing product's print_areas to a new image ID,
+ * then re-publish the product so Etsy/sales-channel listings pick up the new artwork.
+ * Required after re-uploading a regenerated PNG — Printify does NOT auto-update products
+ * when the underlying upload changes; the product holds a fixed reference to the old
+ * upload ID until you PUT new print_areas.
+ */
+export async function repointProductImage(
+  productId: string,
+  newImageId: string,
+  options: { publish?: boolean } = {}
+): Promise<PrintifyProduct> {
+  const { shopId } = requirePrintify();
+  const current = await pf<PrintifyProductWithPrintAreas>('GET', `/shops/${shopId}/products/${productId}.json`);
+
+  const updatedPrintAreas = (current.print_areas ?? []).map(area => ({
+    variant_ids: area.variant_ids,
+    placeholders: area.placeholders.map(ph => ({
+      position: ph.position,
+      images: ph.images.map(img => ({ ...img, id: newImageId })),
+    })),
+  }));
+
+  const updated = await pf<PrintifyProduct>('PUT', `/shops/${shopId}/products/${productId}.json`, {
+    print_areas: updatedPrintAreas,
+  });
+
+  if (options.publish) {
+    try {
+      await pf('POST', `/shops/${shopId}/products/${productId}/publish.json`, {
+        title: true,
+        description: true,
+        images: true,
+        variants: true,
+        tags: true,
+      });
+      updated.published_at = new Date().toISOString();
+    } catch (err) {
+      console.warn(`Failed to re-publish product ${productId} after image swap:`, err);
+    }
+  }
+
+  return updated;
+}
+
 /**
  * Generate Printify mockups for an uploaded image by spinning up a throwaway draft product
  * (no published listing), capturing the rendered mockup URLs, and deleting the product.
