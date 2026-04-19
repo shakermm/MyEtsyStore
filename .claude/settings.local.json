@@ -18,7 +18,8 @@
       "Bash(node -e \"let s=''; process.stdin.on\\('data',d=>s+=d\\); process.stdin.on\\('end',\\(\\)=>{const arr=JSON.parse\\(s\\); console.log\\(arr.length+' designs:'\\); arr.forEach\\(m=>console.log\\(' -',m.slug,'|',\\(m.title||''\\).slice\\(0,60\\)\\)\\);}\\)\")",
       "Bash(netstat -ano)",
       "Bash(taskkill //F //PID 11956)",
-      "Bash(taskkill //F //PID 16272)"
+      "Bash(taskkill //F //PID 16272)",
+      "Bash(taskkill //F //PID 18876)"
     ]
   }
 }

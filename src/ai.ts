@@ -26,15 +26,48 @@ OUTPUT IS PRODUCTION-CRITICAL — every field is consumed by an automated pipeli
 
 Brand Voice:
 - Witty, irreverent, self-deprecating; relatable ADULT humor (millennial / Gen-X / parent / professional / gamer)
-- Target audience: ADULTS 25-55. Themes: work burnout, marriage, parenting chaos, mortgages, midlife, dating, drinking (coffee/wine/beer), introvert life, bad sleep, social anxiety, overthinking, home ownership, anti-corporate sarcasm.
-- Bestseller examples: "Nobody needs this much baby oil", "Therapy is cheaper than wine", "Dada Daddy Dad Bruh", "Fueled by spite and iced coffee"
-- Clean bold typography + minimalist illustration. Strong central concept per design.
+- Target audience: ADULTS 25-55. Clean bold typography + minimalist illustration. Strong central concept per design.
 
-SUBJECT DIVERSITY RULES (very important — avoid one-trick designs):
-- DO NOT default to cute animal mascots. Cats / dogs / generic mascot characters should appear in AT MOST 1 in 10 designs. The store is currently over-saturated with cat designs — actively avoid them.
-- VARY the visual subject across designs. Rotate between: bold typography-only, hands holding objects (coffee mug, wine glass, phone, beer can, controller, baby bottle), everyday objects as hero (alarm clock, calendar, laptop, vacuum, minivan), abstract icons (brain, heart, lightning, eyes), retro/vintage badges, faux-vintage seals, person silhouettes from the chest-up (no garments visible), surreal mash-ups (pizza-shaped halo, coffee IV drip).
-- When in doubt, choose TYPOGRAPHY-FIRST: a bold sarcastic phrase as the hero with one or two small supporting icons.
-- The visual must MATCH the joke. A burnout joke ≠ cat. A wine-mom joke ≠ cat. Pick the literal object/scene the line implies.
+THEME ROTATION (CRITICAL — actively diversify, do NOT keep producing the same persona):
+Every design must pick from a DIFFERENT theme bucket than recent designs. The 20 buckets are:
+  1.  Marriage / spouse jokes (husband/wife dynamics, in-laws, anniversaries)
+  2.  Parenting toddlers (tantrums, snacks, bedtime, mom/dad survival)
+  3.  Parenting teens (eye-rolls, attitude, taxi service, embarrassing dad)
+  4.  Dating / single life (apps, ghosting, situationships, red flags)
+  5.  Pet owners (dog parents, dog walkers — NOT generic cat mascots)
+  6.  Drinking culture (beer, wine, whiskey, brewery, happy hour, hangover)
+  7.  Coffee culture (barista, espresso, cold brew — but NOT "fueled by coffee" cliché)
+  8.  Fitness / gym (lifting, running, yoga, gym bros, post-workout)
+  9.  Anti-fitness (couch life, gravity wins, cardio jokes, snacks)
+  10. Food / cooking (BBQ, taco, pizza, foodie, brunch, hot sauce, vegan jokes)
+  11. Cars / motorcycles (truck life, jeep, EV, mechanic, road rage)
+  12. Outdoors (camping, fishing, hiking, hunting, beach, lake life)
+  13. Sports fandom (golf, fishing, hockey, fantasy football — generic, no team logos)
+  14. Hobbies (knitting, crochet, gardening, woodworking, gaming, reading)
+  15. Trades / professions (nurse, teacher, electrician, trucker, firefighter, mechanic)
+  16. Anti-corporate / office life (meetings — but rotate, not the default)
+  17. Holidays / seasons (Christmas, Halloween, summer, fall, 4th of July)
+  18. Travel / vacation (road trip, RV, airline, beach vacation, snowbird)
+  19. Midlife / aging (back pain, gray hair, "in my era", grandparent humor)
+  20. Pop-culture parody (movies, music, retro 80s/90s tropes — generic, no IP)
+
+OVERSATURATED THEMES — produce these AT MOST 1 in 15 designs (the store already has too many):
+- Overthinking / brain has too many tabs / mental load
+- Introvert / social battery / staying home
+- Burnout / pointless meetings / corporate fatigue
+- Therapy is cheaper than X
+- Wine moms / "fueled by spite and coffee"
+- Generic cat mascots
+If your concept fits any of the above, RESTART and pick a different bucket.
+
+Bestseller examples (for VOICE, not theme — do NOT copy these themes):
+"Nobody needs this much baby oil", "Dada Daddy Dad Bruh", "Hide your zucchini" (gardener), "I brake for yard sales", "Pawpaw the legend the myth the lawn-mower", "BBQ dad on duty", "Sleep is for the weak (signed: a baby)"
+
+SUBJECT DIVERSITY RULES (visual, not thematic):
+- DO NOT default to cute animal mascots. Cats / dogs / generic mascot characters appear AT MOST 1 in 10 designs.
+- VARY the visual: bold typography-only, hands holding objects, everyday objects as hero (alarm clock, fishing rod, BBQ tongs, golf club, knitting needles, hammer, beer can, taco), abstract icons, retro/vintage badges, person silhouettes chest-up.
+- When in doubt, choose TYPOGRAPHY-FIRST.
+- The visual must MATCH the joke. A BBQ joke ≠ cat. A fishing joke ≠ coffee mug.
 
 SINGLE IMAGE PROMPT (CRITICAL — describes the ARTWORK ITSELF, NOT a product):
 - imagePrompt: one FLUX.2-pro prompt describing the standalone flat-vector illustration / typography composition.
@@ -68,13 +101,19 @@ Return ONE valid JSON object. No markdown fences. No commentary.`;
   }
 
   async generateIdea(options: GenerationOptions = {}): Promise<ProductIdea> {
-    const { theme = '', style = 'random' } = options;
+    const { theme = '', style = 'random', avoid = [] } = options;
+
+    // Show only the most recent 40 to keep token usage bounded.
+    const avoidList = avoid.slice(0, 40);
+    const avoidBlock = avoidList.length
+      ? `\n\nDO NOT REPEAT — these concepts already exist in the store. Your idea must be in a different theme bucket and use a different hook than ALL of these:\n${avoidList.map((c) => `- ${c}`).join('\n')}\n`
+      : '';
 
     const userPrompt = `Generate ONE product idea for BanterWearCo.
 
-${theme ? `Theme focus: ${theme}` : 'Pick any funny / trending / absurd everyday situation.'}
+${theme ? `Theme focus: ${theme}` : 'Pick a theme bucket from the rotation that is UNDER-represented in the existing list below. Avoid burnout/overthinking/introvert/therapy/wine-mom/cat themes — those are oversaturated.'}
 
-Style preference: ${style}
+Style preference: ${style}${avoidBlock}
 
 Return ONLY this JSON shape — every field required unless marked optional:
 

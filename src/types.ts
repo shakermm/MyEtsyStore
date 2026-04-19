@@ -26,6 +26,8 @@ export interface GenerationOptions {
   theme?: string;
   count?: number;
   style?: 'funny' | 'trending' | 'unique' | 'random';
+  /** Existing concepts/titles to avoid duplicating. Fed to the LLM as an anti-list. */
+  avoid?: string[];
 }
 
 export interface PrintifyMockupImage {

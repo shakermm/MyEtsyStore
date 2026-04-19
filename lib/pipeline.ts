@@ -5,6 +5,7 @@ import type { DesignManifest, GenerationOptions, ProductIdea } from '@/src/types
 import {
   bumpFluxCalls,
   ensureDesignDir,
+  listManifests,
   loadListingStandard,
   readManifest,
   readUsage,
@@ -74,12 +75,17 @@ export async function* runPipeline(input: RunPipelineInput): AsyncGenerator<Pipe
     return;
   }
 
-  // 1. LLM idea
+  // 1. LLM idea — pass existing concepts so it doesn't repeat the same persona.
   yield { type: 'idea.start' };
   let idea: ProductIdea;
   try {
+    const existing = await listManifests();
+    const avoid = existing
+      .slice(0, 40)
+      .map((m) => m.concept || m.title)
+      .filter((s): s is string => Boolean(s && s.trim()));
     const ai = new BanterAI();
-    idea = await ai.generateIdea({ theme: input.theme, style: input.style });
+    idea = await ai.generateIdea({ theme: input.theme, style: input.style, avoid });
   } catch (err) {
     yield { type: 'error', step: 'idea', message: stringifyError(err) };
     return;
