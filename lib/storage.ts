@@ -55,6 +55,19 @@ export async function readManifest(slug: string): Promise<DesignManifest | null>
  * have recommended_shirt_colors as an empty array instead of an object. This shim
  * makes legacy data renderable by the new UI without touching the source files.
  */
+// Duplicated here (rather than importing from src/ai) to keep storage free of LLM deps.
+function sanitizeTitleInline(raw: string): string {
+  return raw
+    .replace(/[\u2018\u2019\u201B\u2032]/g, "'")
+    .replace(/[\u201C\u201D\u201F\u2033]/g, '"')
+    .replace(/[\u2013\u2014\u2015]/g, '-')
+    .replace(/[\u2026]/g, '...')
+    .replace(/[`$^]/g, '')
+    .replace(/\s+/g, ' ')
+    .trim()
+    .slice(0, 140);
+}
+
 function normalizeManifest(raw: any): DesignManifest {
   const rsc = raw.recommended_shirt_colors || raw.recommended_product_colors;
   const recommended_product_colors =
