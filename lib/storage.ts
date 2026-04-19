@@ -78,10 +78,13 @@ function normalizeManifest(raw: any): DesignManifest {
     raw.printify_image_ids?.dark ??
     undefined;
 
+  const rawTitle: string = raw.title ?? raw.slug ?? '';
+  const title = sanitizeTitleInline(rawTitle);
+
   return {
     slug: raw.slug ?? '',
     concept: raw.concept ?? '',
-    title: raw.title ?? raw.slug ?? '',
+    title,
     description: raw.description ?? '',
     product_features: Array.isArray(raw.product_features) ? raw.product_features : [],
     care_instructions: Array.isArray(raw.care_instructions) ? raw.care_instructions : [],

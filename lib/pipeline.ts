@@ -132,7 +132,14 @@ export async function* runPipeline(input: RunPipelineInput): AsyncGenerator<Pipe
     if (printifyImageId && createProducts) {
       yield { type: 'printify.products.start' };
       try {
-        const product = await createUniversalProduct(idea, printifyImageId, {
+        // Assemble the full description (creative block + product features + care
+        // + footer) BEFORE creating the product, so Printify gets the complete text.
+        const standardEarly = await loadListingStandard();
+        const ideaWithFullDesc: ProductIdea = {
+          ...idea,
+          description: assembleDescription(idea, standardEarly),
+        };
+        const product = await createUniversalProduct(ideaWithFullDesc, printifyImageId, {
           publish: input.publishProducts,
         });
         printifyProducts.push(product);

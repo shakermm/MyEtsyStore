@@ -117,7 +117,7 @@ export async function listVariants(blueprintId: number, providerId: number): Pro
 
 // Product type to blueprint ID mappings
 export const PRODUCT_BLUEPRINTS: Record<string, number> = {
-  'tshirt': 6, // Gildan 5000 - Unisex Heavy Cotton Tee
+  'tshirt': 12, // Bella+Canvas 3001 - Unisex Jersey Short Sleeve Tee (softer, better print, preferred over Gildan 5000)
   'hoodie': 8, // Gildan 18500 - Unisex Heavy Blend Hoodie
   'sweatshirt': 18, // Gildan 18000 - Unisex Heavy Blend Crewneck Sweatshirt
   'mug': 21, // Generic brand Ceramic Mug
@@ -222,11 +222,37 @@ export function pickUniversalVariants(
   return picked;
 }
 
+/**
+ * After a product is created, patch it with:
+ *   - tags (Printify sometimes ignores tags on POST / products.json)
+ *   - every image marked `is_selected_for_publishing: true` (so size chart + lifestyle
+ *     mockups are published, not just the default few).
+ */
+export async function finalizeProduct(
+  product: PrintifyProduct,
+  tags: string[] = []
+): Promise<PrintifyProduct> {
+  const { shopId } = requirePrintify();
+  const payload: Record<string, unknown> = {};
+  if (product.images?.length) {
+    payload.images = product.images.map(img => ({ ...img, is_selected_for_publishing: true }));
+  }
+  if (tags.length) payload.tags = tags.slice(0, 13);
+  if (!Object.keys(payload).length) return product;
+  return pf<PrintifyProduct>('PUT', `/shops/${shopId}/products/${product.id}.json`, payload);
+}
+
+/** @deprecated — use finalizeProduct which also handles tags. */
+export async function selectAllMockupsForPublishing(product: PrintifyProduct): Promise<void> {
+  await finalizeProduct(product);
+}
+
 interface CreateProductInput {
   title: string;
   description: string;
   blueprint_id: number;
   print_provider_id: number;
+  tags?: string[];
   variants: Array<{ id: number; price: number; is_enabled: boolean }>;
   print_areas: Array<{
     variant_ids: number[];
@@ -278,9 +304,10 @@ export async function createUniversalProduct(
 
   const productInput: CreateProductInput = {
     title: idea.title.slice(0, 140),
-    description: idea.description.slice(0, 500),
+    description: idea.description, // Printify supports long HTML/plain-text descriptions; do not truncate.
     blueprint_id: blueprintId,
     print_provider_id: providerId,
+    tags: (idea.tags ?? []).slice(0, 13), // Etsy / Printify tag cap.
     variants: chosen.map(v => ({ id: v.id, price: finalPrice, is_enabled: true })),
     print_areas: [
       {
@@ -295,7 +322,15 @@ export async function createUniversalProduct(
     ],
   };
 
-  const product = await pf<PrintifyProduct>('POST', `/shops/${shopId}/products.json`, productInput);
+  let product = await pf<PrintifyProduct>('POST', `/shops/${shopId}/products.json`, productInput);
+
+  // Patch the product: set tags (POST often drops them) + flag every mockup image
+  // (including size chart + lifestyle shots) for publishing.
+  try {
+    product = await finalizeProduct(product, idea.tags ?? []);
+  } catch (err) {
+    console.warn(`Could not finalize product ${product.id}:`, err);
+  }
 
   if (options.publish) {
     try {
@@ -349,7 +384,8 @@ export async function createProduct(
 
     const productInput: CreateProductInput = {
       title: idea.title.slice(0, 140),
-      description: idea.description.slice(0, 500),
+      description: idea.description,
+      tags: (idea.tags ?? []).slice(0, 13),
       blueprint_id: blueprintId,
       print_provider_id: providerId,
       variants: [{ id: variant.id, price: finalPrice, is_enabled: true }],

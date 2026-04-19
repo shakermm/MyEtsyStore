@@ -7,6 +7,26 @@ import {
   extractResponsesOutputText,
 } from './llm';
 
+/**
+ * Etsy title validation bans these characters: `$`, `^`, `` ` `` (backtick). It also
+ * silently flags certain "smart" Unicode punctuation as backtick-adjacent. We:
+ *   - strip $, ^, `
+ *   - normalize smart quotes / dashes to ASCII equivalents
+ *   - collapse whitespace
+ *   - trim to 140 chars
+ */
+export function sanitizeEtsyTitle(raw: string): string {
+  return raw
+    .replace(/[\u2018\u2019\u201B\u2032]/g, "'") // curly single quotes -> straight
+    .replace(/[\u201C\u201D\u201F\u2033]/g, '"') // curly double quotes -> straight
+    .replace(/[\u2013\u2014\u2015]/g, '-')       // en/em dashes -> hyphen
+    .replace(/[\u2026]/g, '...')                 // ellipsis
+    .replace(/[`$^]/g, '')                       // Etsy-banned
+    .replace(/\s+/g, ' ')
+    .trim()
+    .slice(0, 140);
+}
+
 export class BanterAI {
   private systemPrompt: string;
   private readonly chat: OpenAI;
@@ -166,7 +186,9 @@ Return ONLY this JSON shape — every field required unless marked optional:
       if (fence) content = fence[1].trim();
 
       const parsed = JSON.parse(content);
-      return ProductIdeaSchema.parse(parsed);
+      const idea = ProductIdeaSchema.parse(parsed);
+      idea.title = sanitizeEtsyTitle(idea.title);
+      return idea;
     } catch (error) {
       if (error instanceof z.ZodError) {
         console.error('Schema validation failed:', error.issues);
