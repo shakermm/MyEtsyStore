@@ -6,7 +6,7 @@ import {
   uploadToPrintify,
 } from '@/lib/pipeline';
 import { eventStream } from '@/lib/sse';
-import { readManifest } from '@/lib/storage';
+import { deleteDesign, readManifest } from '@/lib/storage';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -16,6 +16,13 @@ export async function GET(_req: NextRequest, ctx: { params: Promise<{ slug: stri
   const manifest = await readManifest(slug);
   if (!manifest) return Response.json({ error: 'not found' }, { status: 404 });
   return Response.json(manifest);
+}
+
+export async function DELETE(_req: NextRequest, ctx: { params: Promise<{ slug: string }> }) {
+  const { slug } = await ctx.params;
+  const ok = await deleteDesign(slug);
+  if (!ok) return Response.json({ error: 'delete failed' }, { status: 500 });
+  return Response.json({ deleted: slug });
 }
 
 export async function POST(req: NextRequest, ctx: { params: Promise<{ slug: string }> }) {

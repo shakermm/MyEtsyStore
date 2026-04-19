@@ -4,6 +4,7 @@ import { readManifest } from '@/lib/storage';
 import MockupGallery from '@/components/MockupGallery';
 import DesignActions from '@/components/DesignActions';
 import CopyBlock from '@/components/CopyBlock';
+import DeleteDesignButton from '@/components/DeleteDesignButton';
 
 export const dynamic = 'force-dynamic';
 
@@ -24,10 +25,13 @@ export default async function DesignDetailPage({ params }: PageProps) {
         &larr; All designs
       </Link>
 
-      <header>
-        <h1 className="text-3xl font-bold">{manifest.title}</h1>
-        <p className="mt-1 text-sm text-neutral-400">{manifest.slug}</p>
-        <p className="mt-3 text-neutral-300">{manifest.concept}</p>
+      <header className="flex items-start justify-between gap-4">
+        <div>
+          <h1 className="text-3xl font-bold">{manifest.title}</h1>
+          <p className="mt-1 text-sm text-neutral-400">{manifest.slug}</p>
+          <p className="mt-3 text-neutral-300">{manifest.concept}</p>
+        </div>
+        <DeleteDesignButton slug={slug} variant="detail" />
       </header>
 
       <section>

@@ -1,5 +1,6 @@
 import Link from 'next/link';
 import type { DesignManifest } from '@/src/types';
+import DeleteDesignButton from './DeleteDesignButton';
 
 export default function DesignCard({ manifest }: { manifest: DesignManifest }) {
   const thumb =
@@ -10,8 +11,9 @@ export default function DesignCard({ manifest }: { manifest: DesignManifest }) {
   return (
     <Link
       href={`/designs/${manifest.slug}`}
-      className="group block overflow-hidden rounded-xl border border-neutral-800 bg-neutral-900/50 transition hover:border-fuchsia-400/50"
+      className="group relative block overflow-hidden rounded-xl border border-neutral-800 bg-neutral-900/50 transition hover:border-fuchsia-400/50"
     >
+      <DeleteDesignButton slug={manifest.slug} variant="card" />
       <div className="aspect-square bg-neutral-950">
         {thumb ? (
           // eslint-disable-next-line @next/next/no-img-element

@@ -99,6 +99,16 @@ function normalizeManifest(raw: any): DesignManifest {
   };
 }
 
+export async function deleteDesign(slug: string): Promise<boolean> {
+  const dir = designDir(slug);
+  try {
+    await fs.rm(dir, { recursive: true, force: true });
+    return true;
+  } catch {
+    return false;
+  }
+}
+
 export async function writeManifest(manifest: DesignManifest): Promise<void> {
   await ensureDesignDir(manifest.slug);
   await fs.writeFile(
