@@ -1,8 +1,8 @@
 import { NextRequest } from 'next/server';
 import {
   createProductsForDesign,
+  regenerateImage,
   regenerateMockups,
-  regenerateVariant,
   uploadToPrintify,
 } from '@/lib/pipeline';
 import { eventStream } from '@/lib/sse';
@@ -21,15 +21,13 @@ export async function GET(_req: NextRequest, ctx: { params: Promise<{ slug: stri
 export async function POST(req: NextRequest, ctx: { params: Promise<{ slug: string }> }) {
   const { slug } = await ctx.params;
   const body = (await req.json().catch(() => ({}))) as {
-    step?: 'flux.light' | 'flux.dark' | 'mockups' | 'printify.upload' | 'printify.products';
+    step?: 'flux' | 'mockups' | 'printify.upload' | 'printify.products';
     publish?: boolean;
   };
 
   switch (body.step) {
-    case 'flux.light':
-      return eventStream(regenerateVariant(slug, 'light'));
-    case 'flux.dark':
-      return eventStream(regenerateVariant(slug, 'dark'));
+    case 'flux':
+      return eventStream(regenerateImage(slug));
     case 'mockups':
       return eventStream(regenerateMockups(slug));
     case 'printify.upload':

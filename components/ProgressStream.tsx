@@ -124,21 +124,21 @@ function formatEvent(e: StreamEvent): string {
     case 'idea.done':
       return `Idea ready · slug=${e.slug} · ${e.idea?.title ?? ''}`;
     case 'flux.start':
-      return `FLUX ${e.variant} variant — calling Azure...`;
+      return 'FLUX — generating universal design...';
     case 'flux.done':
-      return `FLUX ${e.variant} done -> ${e.file}`;
+      return `FLUX done -> ${e.file}`;
     case 'printify.upload.start':
-      return `Printify upload (${e.variant})...`;
+      return 'Printify upload...';
     case 'printify.upload.done':
-      return `Printify uploaded (${e.variant}) · id=${e.imageId}`;
+      return `Printify uploaded · id=${e.imageId}`;
     case 'printify.products.start':
-      return 'Creating Printify products...';
+      return 'Creating Printify product...';
     case 'printify.products.done':
-      return `Printify products created (${e.count}) · IDs: ${e.productIds?.join(', ')}`;
+      return `Printify product created (${e.count}) · IDs: ${e.productIds?.join(', ')}`;
     case 'printify.mockups.start':
-      return `Printify mockups (${e.variant})...`;
+      return 'Printify mockups...';
     case 'printify.mockups.done':
-      return `Printify mockups (${e.variant}) · downloaded ${e.count}`;
+      return `Printify mockups · downloaded ${e.count}`;
     case 'manifest.write':
       return `Wrote manifest for ${e.slug}`;
     case 'done':

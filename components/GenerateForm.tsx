@@ -28,8 +28,8 @@ export default function GenerateForm({ llmReady, fluxReady, printifyReady }: Gen
   const [theme, setTheme] = useState('');
   const [style, setStyle] = useState<'funny' | 'trending' | 'unique' | 'random'>('random');
   const [category, setCategory] = useState<string>('tshirt');
-  const [mockupsPerVariant, setMockupsPerVariant] = useState(2);
-  const [createProducts, setCreateProducts] = useState(true);
+  const [mockupsPerVariant, setMockupsPerVariant] = useState(0);
+  const [createProducts, setCreateProducts] = useState(false);
   const [publishProducts, setPublishProducts] = useState(false);
   const [running, setRunning] = useState(false);
   const [bodyKey, setBodyKey] = useState(0);
@@ -79,6 +79,7 @@ export default function GenerateForm({ llmReady, fluxReady, printifyReady }: Gen
           disabled={running}
           className="rounded-md border border-neutral-700 bg-neutral-950 px-3 py-2 text-sm"
         >
+          <option value={0}>No mockups</option>
           <option value={1}>1 mockup</option>
           <option value={2}>2 mockups</option>
           <option value={3}>3 mockups</option>

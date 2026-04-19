@@ -193,6 +193,35 @@ export function pickVariantByPalette(
   return pool[0];
 }
 
+/**
+ * Pick all variants whose color matches the combined light + dark palette for the product
+ * type, optionally filtered to a set of preferred sizes. Returns at most one variant per
+ * (color, size) pair.
+ */
+export function pickUniversalVariants(
+  variants: PrintifyVariant[],
+  productType: string = 'tshirt',
+  preferredSizes: string[] = ['S', 'M', 'L', 'XL', '2XL']
+): PrintifyVariant[] {
+  const colors = PRODUCT_COLORS[productType as keyof typeof PRODUCT_COLORS] || PRODUCT_COLORS.other;
+  const targets = [...new Set([...colors.light, ...colors.dark])];
+  const sizeSet = new Set(preferredSizes.map(s => s.toLowerCase()));
+  const picked: PrintifyVariant[] = [];
+  const seen = new Set<string>();
+  for (const v of variants) {
+    const color = (v.options.color || '').toLowerCase();
+    const size = (v.options.size || '').toLowerCase();
+    if (!targets.some(t => color.includes(t))) continue;
+    // Size filter only applies if the blueprint actually has sizes.
+    if (size && sizeSet.size && !sizeSet.has(size)) continue;
+    const key = `${color}|${size}`;
+    if (seen.has(key)) continue;
+    seen.add(key);
+    picked.push(v);
+  }
+  return picked;
+}
+
 interface CreateProductInput {
   title: string;
   description: string;
@@ -212,6 +241,78 @@ export interface PrintifyProductResponse {
   id: string;
   title: string;
   images: PrintifyMockupImage[];
+}
+
+/**
+ * Create ONE Printify product using a single universal design image, enabling all
+ * variants whose colors span the light + dark palettes for the product category.
+ * Much cheaper than two separate products and keeps Etsy listings unified.
+ */
+export async function createUniversalProduct(
+  idea: ProductIdea,
+  imageId: string,
+  options: {
+    publish?: boolean;
+    blueprintIdOverride?: number;
+    providerIdOverride?: number;
+  } = {}
+): Promise<PrintifyProduct> {
+  const { shopId } = requirePrintify();
+  const blueprintId =
+    options.blueprintIdOverride ??
+    idea.printifyBlueprintId ??
+    PRODUCT_BLUEPRINTS[idea.category] ??
+    PRODUCT_BLUEPRINTS.tshirt;
+  const providerId = options.providerIdOverride ?? (await resolveDefaultProviderId(blueprintId));
+  const variantsResp = await listVariants(blueprintId, providerId);
+
+  const chosen = pickUniversalVariants(variantsResp.variants, idea.category);
+  if (!chosen.length) {
+    throw new Error(
+      `No matching variants for ${idea.category} (blueprint ${blueprintId}, provider ${providerId}).`
+    );
+  }
+
+  const basePrice = getBasePriceForProduct(idea.category);
+  const finalPrice = idea.targetPrice || basePrice;
+
+  const productInput: CreateProductInput = {
+    title: idea.title.slice(0, 140),
+    description: idea.description.slice(0, 500),
+    blueprint_id: blueprintId,
+    print_provider_id: providerId,
+    variants: chosen.map(v => ({ id: v.id, price: finalPrice, is_enabled: true })),
+    print_areas: [
+      {
+        variant_ids: chosen.map(v => v.id),
+        placeholders: [
+          {
+            position: getDefaultPrintPosition(idea.category),
+            images: [{ id: imageId, x: 0.5, y: 0.5, scale: getScaleForProduct(idea.category), angle: 0 }],
+          },
+        ],
+      },
+    ],
+  };
+
+  const product = await pf<PrintifyProduct>('POST', `/shops/${shopId}/products.json`, productInput);
+
+  if (options.publish) {
+    try {
+      await pf('POST', `/shops/${shopId}/products/${product.id}/publish.json`, {
+        title: true,
+        description: true,
+        images: true,
+        variants: true,
+        tags: true,
+      });
+      product.published_at = new Date().toISOString();
+    } catch (error) {
+      console.warn(`Failed to publish product ${product.id}:`, error);
+    }
+  }
+
+  return product;
 }
 
 export async function createProduct(

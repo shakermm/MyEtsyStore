@@ -5,20 +5,18 @@ import { useState } from 'react';
 import ProgressStream from './ProgressStream';
 
 type Step =
-  | 'flux.light'
-  | 'flux.dark'
+  | 'flux'
   | 'mockups'
   | 'printify.upload'
   | 'printify.products'
   | 'printify.products.publish';
 
 const STEP_LABELS: Record<Step, string> = {
-  'flux.light': 'Regenerate light variant',
-  'flux.dark': 'Regenerate dark variant',
+  flux: 'Regenerate image',
   mockups: 'Regenerate mockups',
   'printify.upload': 'Upload to Printify',
-  'printify.products': 'Create Printify products (draft)',
-  'printify.products.publish': 'Create & publish Printify products',
+  'printify.products': 'Create Printify product (draft)',
+  'printify.products.publish': 'Create & publish Printify product',
 };
 
 function stepBody(step: Step): Record<string, unknown> {

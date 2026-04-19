@@ -65,6 +65,19 @@ function normalizeManifest(raw: any): DesignManifest {
         }
       : { light_variant: [], dark_variant: [] };
 
+  // Migrate legacy two-image manifests to the new single-image shape.
+  const image =
+    raw.files?.image ??
+    raw.files?.light ??
+    raw.files?.dark ??
+    '';
+  const printifyImageId =
+    raw.printify_image_id ??
+    raw.printify_image_ids?.image ??
+    raw.printify_image_ids?.light ??
+    raw.printify_image_ids?.dark ??
+    undefined;
+
   return {
     slug: raw.slug ?? '',
     concept: raw.concept ?? '',
@@ -76,12 +89,9 @@ function normalizeManifest(raw: any): DesignManifest {
     tags: Array.isArray(raw.tags) ? raw.tags : [],
     keywords: Array.isArray(raw.keywords) ? raw.keywords : [],
     recommended_product_colors,
-    files: {
-      light: raw.files?.light ?? '',
-      dark: raw.files?.dark ?? '',
-    },
+    files: { image },
     mockups: Array.isArray(raw.mockups) ? raw.mockups : [],
-    printify_image_ids: raw.printify_image_ids ?? {},
+    printify_image_id: printifyImageId,
     printify_mockups: Array.isArray(raw.printify_mockups) ? raw.printify_mockups : [],
     printify_products: Array.isArray(raw.printify_products) ? raw.printify_products : [],
     qa_reviews: raw.qa_reviews,

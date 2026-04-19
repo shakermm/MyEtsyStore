@@ -16,8 +16,7 @@ export default async function DesignDetailPage({ params }: PageProps) {
   const manifest = await readManifest(slug);
   if (!manifest) notFound();
 
-  const lightSrc = manifest.files.light ? `/api/asset/${slug}/${manifest.files.light}` : null;
-  const darkSrc = manifest.files.dark ? `/api/asset/${slug}/${manifest.files.dark}` : null;
+  const imageSrc = manifest.files.image ? `/api/asset/${slug}/${manifest.files.image}` : null;
 
   return (
     <div className="space-y-8">
@@ -32,10 +31,9 @@ export default async function DesignDetailPage({ params }: PageProps) {
       </header>
 
       <section>
-        <h2 className="mb-3 text-lg font-semibold">Transparent designs</h2>
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-          <VariantPanel label="LIGHT (for white/cream/heather shirts)" src={lightSrc} />
-          <VariantPanel label="DARK (for black/navy/asphalt shirts)" src={darkSrc} />
+        <h2 className="mb-3 text-lg font-semibold">Universal design (works on light & dark garments)</h2>
+        <div className="max-w-xl">
+          <VariantPanel label="TRANSPARENT PNG" src={imageSrc} />
         </div>
       </section>
 
@@ -66,12 +64,16 @@ export default async function DesignDetailPage({ params }: PageProps) {
         <h2 className="mb-3 text-base font-semibold">Printify status</h2>
         <ul className="space-y-1 text-neutral-300">
           <li>
-            Light upload ID:{' '}
-            <code className="text-fuchsia-300">{manifest.printify_image_ids.light || '— not uploaded —'}</code>
+            Image upload ID:{' '}
+            <code className="text-fuchsia-300">{manifest.printify_image_id || '— not uploaded —'}</code>
           </li>
           <li>
-            Dark upload ID:{' '}
-            <code className="text-fuchsia-300">{manifest.printify_image_ids.dark || '— not uploaded —'}</code>
+            Products:{' '}
+            <code className="text-fuchsia-300">
+              {manifest.printify_products?.length
+                ? manifest.printify_products.map(p => p.id).join(', ')
+                : '— no product yet —'}
+            </code>
           </li>
           <li className="text-neutral-500">
             Created {new Date(manifest.created_at).toLocaleString()}

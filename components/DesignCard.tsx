@@ -4,8 +4,7 @@ import type { DesignManifest } from '@/src/types';
 export default function DesignCard({ manifest }: { manifest: DesignManifest }) {
   const thumb =
     (manifest.mockups && manifest.mockups[0]) ||
-    manifest.files.dark ||
-    manifest.files.light ||
+    manifest.files.image ||
     null;
 
   return (
@@ -32,7 +31,7 @@ export default function DesignCard({ manifest }: { manifest: DesignManifest }) {
         <p className="mt-1 line-clamp-1 text-xs text-neutral-500">{manifest.slug}</p>
         <p className="mt-2 text-[10px] uppercase tracking-wider text-neutral-600">
           {manifest.tags.length} tags · {manifest.keywords.length} keywords ·{' '}
-          {manifest.printify_image_ids.light || manifest.printify_image_ids.dark ? 'on Printify' : 'local only'}
+          {manifest.printify_image_id ? 'on Printify' : 'local only'}
         </p>
       </div>
     </Link>

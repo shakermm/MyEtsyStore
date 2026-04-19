@@ -9,7 +9,7 @@ No realistic plate armor, spikes, or menacing helmets. If you show a "guard" or 
 `;
 
 const STYLE_SUFFIX =
-  ' Premium humorous t-shirt graphic, clean vector look, high contrast, family-friendly, suitable for print-on-demand, no photorealism. ISOLATED ARTWORK ONLY — no t-shirt mockup, no garment, no hanger, no model, no background scene. Plain transparent background.';
+  ' Premium humorous t-shirt graphic, clean vector look, high contrast, family-friendly, suitable for print-on-demand, no photorealism. ISOLATED ARTWORK ONLY — no t-shirt mockup, no garment, no hanger, no model, no background scene. BACKGROUND MUST BE EITHER FULLY TRANSPARENT or SOLID PURE WHITE (#FFFFFF) — absolutely no gradient, no texture, no noise, no off-white, no color tint, no pattern, no shadow. The background is only there to be keyed out in post-processing.';
 
 function buildUrl(raw: string): string {
   const base = raw.trim().replace(/\/$/, '');

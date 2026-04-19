@@ -6,9 +6,7 @@ export const ProductIdeaSchema = z.object({
   description: z.string().describe('Creative/marketing copy (hook + Perfect for + DETAILS bullets). Care/features/footer are appended programmatically.'),
   tags: z.array(z.string()).min(13).max(13).describe('Exactly 13 Etsy tags (Etsy max)'),
   keywords: z.array(z.string()).min(10).max(15).describe('10-15 Etsy SEO keywords (long-tail, distinct from tags)'),
-  lightImagePrompt: z.string().describe('Prompt for the design printed on LIGHT products. Dark inks (black, navy, deep maroon, forest), high contrast on white/cream/heather. Transparent background.'),
-  darkImagePrompt: z.string().describe('Prompt for the design printed on DARK products. Bright saturated fills (hot pink, neon yellow, electric blue, mint teal, lime green, magenta) — NEVER cream/off-white inside the design. Transparent background.'),
-  imagePrompt: z.string().describe('Master concept prompt (fallback / shared style notes)'),
+  imagePrompt: z.string().describe('Single FLUX prompt for a universal design that reads on BOTH light and dark garments. Use a dual-mode palette: dark outline (e.g. deep navy/black) + mid-tone fills (teal, coral, mustard, lavender) + small bright accents. Avoid pure white fills without a dark outline (disappear on light shirts) and avoid pure black fills without a bright outline (disappear on dark shirts). Transparent background, vector/print-ready, no mockup.'),
   printReadyPrompt: z.string().describe('POD print specs: typography, stroke weights, max-2-color recommendations'),
   category: z.enum(['tshirt', 'hoodie', 'sweatshirt', 'mug', 'poster', 'shower-curtain', 'phone-case', 'tote-bag', 'pillow', 'other']),
   humorStyle: z.string(),
@@ -98,14 +96,12 @@ export interface DesignManifest {
     dark_variant: string[];
   };
   files: {
-    light: string;
-    dark: string;
+    /** Single universal design that works on both light and dark garments. */
+    image: string;
   };
   mockups: string[];
-  printify_image_ids: {
-    light?: string;
-    dark?: string;
-  };
+  /** Printify uploads.images.json ID for the universal design. */
+  printify_image_id?: string;
   printify_mockups: PrintifyMockupSet[];
   printify_products?: PrintifyProduct[];
   qa_reviews?: Record<string, QaReview>;

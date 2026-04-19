@@ -10,7 +10,8 @@ export async function POST(req: NextRequest) {
     theme?: string;
     style?: 'funny' | 'trending' | 'unique' | 'random';
     category?: 'tshirt' | 'hoodie' | 'sweatshirt' | 'mug' | 'poster' | 'shower-curtain' | 'phone-case' | 'tote-bag' | 'pillow' | 'other';
-    mockupsPerVariant?: number;
+    mockupsPerVariant?: number; // legacy field
+    mockupCount?: number;
     createProducts?: boolean;
     publishProducts?: boolean;
   };
@@ -20,7 +21,7 @@ export async function POST(req: NextRequest) {
       theme: body.theme,
       style: body.style,
       category: body.category,
-      mockupsPerVariant: body.mockupsPerVariant,
+      mockupCount: body.mockupCount ?? body.mockupsPerVariant,
       createProducts: body.createProducts,
       publishProducts: body.publishProducts,
     })
