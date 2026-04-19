@@ -3,13 +3,36 @@
  * https://learn.microsoft.com/en-us/azure/foundry/foundry-models/how-to/use-foundry-models-flux
  */
 
-const FLUX_SAFETY_PREFIX = `PG-rated graphic tee art only — STRICT:
-No weapons of any kind (no swords, knives, spears, axes, guns, bats, clubs). No combat, fighting, blood, injuries, or aggressive poses.
-No realistic plate armor, spikes, or menacing helmets. If you show a "guard" or fantasy figure, use a soft rounded mascot / plush-toy / costume-party style with cloth tunic or hoodie, big friendly eyes, simple shapes — cute cartoon flat vector only.
+const FLUX_SAFETY_PREFIX = `ABSOLUTE RULE #1 — OUTPUT IS A STANDALONE DIGITAL STICKER / CLIP-ART / PRINT FILE.
+DO NOT render any garment of any kind. NO t-shirt, NO hoodie, NO sweatshirt, NO tank top, NO polo, NO tote bag, NO mug, NO pillow, NO phone case, NO hanger, NO mannequin, NO person wearing clothing, NO fabric, NO collar, NO sleeves, NO neckline. If the subject is a cat, draw ONLY the cat. If the subject is text, draw ONLY the text. The image you produce will later be placed onto a shirt by a separate system — your job is to produce the artwork alone on a blank background.
+
+ABSOLUTE RULE #2 — PG-rated only. No weapons, knives, guns, bats, clubs, swords, spears, axes. No combat, fighting, blood, injuries, or aggressive poses. No realistic plate armor, spikes, or menacing helmets. If you show a fantasy figure, use a soft rounded mascot / plush-toy / costume-party style with cloth tunic or hoodie, big friendly eyes, simple shapes — cute cartoon flat vector only.
 `;
 
 const STYLE_SUFFIX =
-  ' Premium humorous t-shirt graphic, clean vector look, high contrast, family-friendly, suitable for print-on-demand, no photorealism. ISOLATED ARTWORK ONLY — no t-shirt mockup, no garment, no hanger, no model, no background scene. BACKGROUND MUST BE EITHER FULLY TRANSPARENT or SOLID PURE WHITE (#FFFFFF) — absolutely no gradient, no texture, no noise, no off-white, no color tint, no pattern, no shadow. The background is only there to be keyed out in post-processing.';
+  ' Clean vector illustration / sticker art style, high contrast, family-friendly, suitable for print-on-demand, no photorealism. ISOLATED SUBJECT ON BLANK BACKGROUND — the image contains the illustration and NOTHING ELSE. BACKGROUND MUST BE FULLY TRANSPARENT or SOLID PURE WHITE (#FFFFFF) — absolutely no gradient, no texture, no noise, no off-white, no color tint, no pattern, no shadow, no drop shadow on the bg, no garment silhouette, no shirt shape, no frame. Think of the output as a die-cut sticker on a blank sheet.';
+
+/**
+ * Remove product / garment / mockup references from the user-supplied prompt. FLUX
+ * is extremely literal: any "t-shirt graphic" / "shirt design" phrasing causes it to
+ * render an actual t-shirt. We want the raw artwork only.
+ */
+function sanitizeProductWords(text: string): string {
+  const patterns: Array<[RegExp, string]> = [
+    [/\b(t[-\s]?shirts?|tees?|tee[-\s]?shirts?)\b/gi, 'illustration'],
+    [/\b(hoodies?|sweatshirts?|sweaters?)\b/gi, 'illustration'],
+    [/\b(tank[-\s]?tops?|polos?)\b/gi, 'illustration'],
+    [/\b(mugs?|tote[-\s]?bags?|totes?|pillows?|phone[-\s]?cases?|shower[-\s]?curtains?)\b/gi, 'illustration'],
+    [/\b(mockups?|product[-\s]?mockups?|apparel|garments?|clothing|fabric|hangers?|mannequins?)\b/gi, ''],
+    [/\b(printed on|design on|graphic on|placed on)\s+(a|an|the)?\s*(shirt|tee|hoodie|mug|tote|pillow|apparel)\b/gi, ''],
+    [/\bon\s+(a|an|the)?\s*(shirt|tee|hoodie|mug|tote|pillow)\b/gi, ''],
+  ];
+  let out = text;
+  for (const [re, replacement] of patterns) out = out.replace(re, replacement);
+  // Collapse double spaces / orphaned punctuation left behind.
+  out = out.replace(/\s{2,}/g, ' ').replace(/\s+([,.;:!?])/g, '$1').trim();
+  return out;
+}
 
 function buildUrl(raw: string): string {
   const base = raw.trim().replace(/\/$/, '');
@@ -77,9 +100,10 @@ export async function generateFluxBuffer(
   const width = opts.width ?? Number(process.env.AZURE_FLUX_WIDTH || 1024);
   const height = opts.height ?? Number(process.env.AZURE_FLUX_HEIGHT || 1024);
 
-  let prompt = `${FLUX_SAFETY_PREFIX}\n\n${imagePrompt.trim()}`;
+  const cleanedUser = sanitizeProductWords(imagePrompt.trim());
+  let prompt = `${FLUX_SAFETY_PREFIX}\n\n${cleanedUser}`;
   if (opts.printReadyPrompt?.trim()) {
-    prompt += `\n\nPrint notes: ${opts.printReadyPrompt.trim()}`;
+    prompt += `\n\nPrint notes: ${sanitizeProductWords(opts.printReadyPrompt.trim())}`;
   }
   prompt += `\n\n${STYLE_SUFFIX}`;
   if (prompt.length > 8000) prompt = prompt.slice(0, 8000);

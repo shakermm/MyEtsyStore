@@ -27,13 +27,14 @@ Brand Voice:
 - Bestseller examples: "Nobody needs this much baby oil", "Therapy is cheaper than wine", "Dada Daddy Dad Bruh", "Fueled by spite and iced coffee"
 - Clean bold typography + minimalist illustration. Strong central concept per design.
 
-SINGLE IMAGE PROMPT (CRITICAL — ONE universal design, used on BOTH light and dark garments):
-- imagePrompt: one FLUX.2-pro prompt. The art must read clearly on WHITE, CREAM, HEATHER shirts AND on BLACK, NAVY, ASPHALT shirts without regeneration.
-- Use a DUAL-MODE PALETTE: dark outline (deep navy / near-black / charcoal, ~2-3px stroke) around every filled shape + MID-TONE fills (teal, coral, dusty pink, mustard, sage, lavender, burnt orange) + small BRIGHT ACCENTS (hot pink, neon yellow, electric blue, lime, magenta).
-- FORBIDDEN: pure white (#ffffff) fills without a dark outline (invisible on light shirts). Pure black (#000000) fills without a light/bright outline (invisible on dark shirts). No cream / off-white / pastel solid fills.
-- Specify: transparent background, print-ready vector style, crisp bold linework, no photorealism, no product mockup in the image (just the artwork itself).
-- Consider product type: mugs need center-focused compact designs, posters can be larger, phone cases need compact layouts, apparel needs appropriate chest-placement sizing.
-- FLUX SAFETY: PG-rated only. No weapons, combat, blood, realistic armor, aggressive poses. For fantasy figures use soft mascot / plush / costume style — never swords, never battle poses.
+SINGLE IMAGE PROMPT (CRITICAL — describes the ARTWORK ITSELF, NOT a product):
+- imagePrompt: one FLUX.2-pro prompt describing the standalone illustration / typography composition.
+- **NEVER mention "t-shirt", "shirt", "hoodie", "mug", "tote", "mockup", "garment", "apparel" or any product word inside imagePrompt.** FLUX will draw whatever you describe — if you say "t-shirt graphic" it will render a t-shirt. Describe ONLY the illustration subject (e.g. "a grumpy cat sitting on a folding chair with bold text above reading 'MY OTHER CAR IS A FOLDING CHAIR'").
+- The output must be a standalone STICKER / CLIP-ART / PRINT-READY VECTOR on a blank background. The garment will be added later by the print-on-demand system.
+- DUAL-MODE PALETTE (so it reads on both light and dark garments): dark outline (deep navy / near-black / charcoal, ~2-3px stroke) around every filled shape + MID-TONE fills (teal, coral, dusty pink, mustard, sage, lavender, burnt orange) + small BRIGHT ACCENTS (hot pink, neon yellow, electric blue, lime, magenta).
+- FORBIDDEN fills: pure white (#ffffff) without a dark outline. Pure black (#000000) without a light/bright outline. No cream / off-white / pastel solid fills.
+- Specify: transparent or solid white background, crisp bold linework, no photorealism, NO garment, NO mockup, NO model, NO hanger, NO fabric, NO frame, NO scene.
+- FLUX SAFETY: PG-rated only. No weapons, combat, blood, realistic armor, aggressive poses. For fantasy figures use soft mascot / plush / costume style.
 
 DESCRIPTION RULES:
 - 200-350 word creative section ONLY. Hook (1-2 lines) + emotional angle + "Perfect for:" bullets + DETAILS bullets (fit, available in a full range of light and dark colors, what is on the shirt, made-to-order).
@@ -73,7 +74,7 @@ Return ONLY this JSON shape — every field required unless marked optional:
   "description": "200-350 word creative section: hook + Perfect for bullets + DETAILS bullets. NO product features / care / footer.",
   "tags": ["exactly", "thirteen", "tags", "lowercase"],
   "keywords": ["10 to 15 long-tail SEO keywords"],
-  "imagePrompt": "ONE FLUX prompt for a universal design. Dual-mode palette: dark outline + mid-tone fills + bright accents. Must read on BOTH white/cream/heather AND black/navy/asphalt garments. Transparent background, vector style, no photorealism, no shirt mockup.",
+  "imagePrompt": "Describe ONLY the illustration subject (characters, objects, typography). NEVER use the words shirt/tshirt/hoodie/mug/tote/mockup/garment. Vector sticker / clip-art style. Dual-mode palette: dark outline + mid-tone fills + bright accents. Transparent or solid-white background. No photorealism.",
   "printReadyPrompt": "POD print specs: typography, stroke weights, palette",
   "category": "tshirt|hoodie|sweatshirt|mug|poster|shower-curtain|phone-case|tote-bag|pillow|other",
   "humorStyle": "e.g. sarcastic dad joke, relatable burnout",
