@@ -56,8 +56,8 @@ export async function readManifest(slug: string): Promise<DesignManifest | null>
  * makes legacy data renderable by the new UI without touching the source files.
  */
 function normalizeManifest(raw: any): DesignManifest {
-  const rsc = raw.recommended_shirt_colors;
-  const recommended_shirt_colors =
+  const rsc = raw.recommended_shirt_colors || raw.recommended_product_colors;
+  const recommended_product_colors =
     rsc && typeof rsc === 'object' && !Array.isArray(rsc)
       ? {
           light_variant: rsc.light_variant ?? [],
@@ -75,7 +75,7 @@ function normalizeManifest(raw: any): DesignManifest {
     listing_footer: raw.listing_footer ?? '',
     tags: Array.isArray(raw.tags) ? raw.tags : [],
     keywords: Array.isArray(raw.keywords) ? raw.keywords : [],
-    recommended_shirt_colors,
+    recommended_product_colors,
     files: {
       light: raw.files?.light ?? '',
       dark: raw.files?.dark ?? '',
@@ -102,6 +102,11 @@ export async function writeDesignFile(slug: string, filename: string, buffer: Bu
   const full = path.join(designDir(slug), filename);
   await fs.writeFile(full, buffer);
   return full;
+}
+
+export async function readDesignBuffer(slug: string, filename: string): Promise<Buffer> {
+  const full = path.join(designDir(slug), filename);
+  return await fs.readFile(full);
 }
 
 export interface ListingStandard {

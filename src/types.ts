@@ -45,6 +45,19 @@ export interface PrintifyMockupSet {
   images: PrintifyMockupImage[];
 }
 
+export interface PrintifyVariantOption {
+  color?: string;
+  size?: string;
+}
+
+export interface PrintifyVariant {
+  id: number;
+  price: number;
+  is_enabled: boolean;
+  title: string;
+  options: PrintifyVariantOption;
+}
+
 export interface PrintifyProduct {
   id: string;
   title: string;
