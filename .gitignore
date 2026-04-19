@@ -1,27 +1,31 @@
 # Dependencies
 node_modules/
-dist/
+
+# Next.js
+.next/
+out/
+next-env.d.ts
 
 # Environment
 .env
+.env.local
+.env*.local
 
 # Output
 ideas/
 *.log
+data/usage.json
 
 # Legacy/scratch asset folders (superseded by designs/<slug>/)
 images/
 mockups/
 generated-images/
+dist/
 
 # IDE
 .vscode/
 .idea/
 .DS_Store
-
-# Ignore Cursor data but keep the rules folder (those are part of the project)
-.cursor/*
-!.cursor/rules/
 
 # Build artifacts
 *.tsbuildinfo

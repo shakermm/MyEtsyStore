@@ -1,0 +1,21 @@
+{
+  "permissions": {
+    "allow": [
+      "Skill(update-config)",
+      "Skill(update-config:*)",
+      "WebFetch(domain:developers.printify.com)",
+      "Bash(npm install *)",
+      "Bash(npx tsc *)",
+      "Bash(npm run *)",
+      "Bash(curl -s -o /dev/null -w \"HTTP %{http_code} in %{time_total}s\\\\n\" http://localhost:3000/)",
+      "Bash(curl -s http://localhost:3000/api/designs)",
+      "Bash(curl -s -o /dev/null -w \"designs/dada-daddy-dad-bruh: HTTP %{http_code}\\\\n\" http://localhost:3000/designs/dada-daddy-dad-bruh)",
+      "Bash(curl -s -o /dev/null -w \"asset light png: HTTP %{http_code}\\\\n\" http://localhost:3000/api/asset/dada-daddy-dad-bruh/dada-daddy-dad-bruh-light.png)",
+      "Bash(curl -s -o /dev/null -w \"home: HTTP %{http_code}\\\\n\" http://localhost:3000/)",
+      "Bash(curl -s -o /dev/null -w \"detail: HTTP %{http_code}\\\\n\" http://localhost:3000/designs/dada-daddy-dad-bruh)",
+      "Bash(curl -s -o /dev/null -w \"asset: HTTP %{http_code}\\\\n\" http://localhost:3000/api/asset/dada-daddy-dad-bruh/dada-daddy-dad-bruh-light.png)",
+      "Bash(python -c \"import sys, json; d=json.load\\(sys.stdin\\); print\\(f'{len\\(d\\)} designs:'\\); [print\\(' -', m['slug'], '|', m['title'][:50]\\) for m in d]\")",
+      "Bash(node -e \"let s=''; process.stdin.on\\('data',d=>s+=d\\); process.stdin.on\\('end',\\(\\)=>{const arr=JSON.parse\\(s\\); console.log\\(arr.length+' designs:'\\); arr.forEach\\(m=>console.log\\(' -',m.slug,'|',\\(m.title||''\\).slice\\(0,60\\)\\)\\);}\\)\")"
+    ]
+  }
+}

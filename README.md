@@ -1,145 +1,103 @@
-# BanterWearCo Idea Generator
+# MyEtsyStore — BanterWearCo Idea Generator
 
-AI-powered command line tool for generating **funny, trending, and unique** Print-on-Demand product ideas for the [BanterWearCo Etsy store](https://www.etsy.com/shop/BanterWearCo).
+A local web app that generates Etsy/Printify product ideas end-to-end:
 
-This tool creates complete product kits with **exceptional focus on image quality**:
-- Witty, unique slogans and concepts that match your existing BanterWearCo voice
-- SEO-optimized Etsy titles and descriptions
-- Targeted keyword tags (15-20 high quality)
-- **Top-tier image prompts** specifically engineered to work on both light AND dark clothing
-- `printReadyPrompt` and `colorStrategy` fields for production
-- Optional **DALL-E 3 image generation** for actual high-quality images
+1. **LLM** (Azure OpenAI / OpenAI) writes the title, description, 13 tags, 10–15 keywords, and two FLUX prompts (one for light shirts, one for dark).
+2. **FLUX.2-pro** (Azure AI Foundry) renders both transparent design variants in parallel.
+3. **sharp** verifies the alpha channel and keys out any near-white background that slipped through.
+4. **Printify** receives both PNGs in your image library, then we spin up throwaway draft products to harvest mockup URLs and download up to 4 mockups per variant.
+5. Everything is persisted to `designs/<slug>/manifest.json` for review and re-export.
 
-## Features
+The whole pipeline streams progress over Server-Sent Events to a Tailwind UI you can drive at `http://localhost:3000`.
 
-- **Brand-aligned humor**: Sarcastic, self-deprecating, relatable "struggle is real", dinosaur, bathroom, parenting, and pop culture humor
-- **`banter generate`** - One command to generate multiple complete product ideas
-- Structured JSON output for easy integration with Printify or design tools
-- Beautiful terminal UI with formatted examples
-- Extensible for future Printify API automation
+## Requirements
 
-## Quick Start
+- Node.js 20+
+- An Azure subscription with **Azure OpenAI** (any chat model — GPT-4o-mini up through GPT-5) and **Azure AI Foundry FLUX.2-pro**
+- A **Printify** account with a Personal Access Token
 
-1. **Install dependencies**
+## Setup
+
+```bash
+npm install
+cp .env.example .env.local
+# Fill in .env.local — see sections below
+npm run dev
+# open http://localhost:3000
+```
+
+### Azure OpenAI
+
+Set in `.env.local`:
+
+```
+AZURE_OPENAI_ENDPOINT=https://YOUR_RESOURCE.openai.azure.com/
+AZURE_OPENAI_API_KEY=...
+AZURE_OPENAI_DEPLOYMENT=your-deployment-name
+```
+
+For GPT-5 deployments, see the comments in `.env.example` — the app defaults to the Responses API.
+
+### Azure FLUX.2-pro
+
+```
+AZURE_FLUX_ENDPOINT=https://YOUR_RESOURCE.services.ai.azure.com/providers/blackforestlabs/v1/flux-2-pro
+AZURE_FLUX_API_KEY=...
+```
+
+### Printify
+
+1. Sign in at <https://printify.com>.
+2. Top-right avatar → **My account** → **Connections** → **Personal access tokens** → **Generate new token**. Required scopes: `shops.read`, `uploads.write`, `products.write`, `products.read`. The token is shown once.
+3. Paste it into `.env.local` as `PRINTIFY_API_TOKEN=...`.
+4. Get your shop ID:
    ```bash
-   npm install
+   curl -H "Authorization: Bearer $PRINTIFY_API_TOKEN" https://api.printify.com/v1/shops.json
    ```
+   Copy the numeric `id` of your Etsy-connected shop into `.env.local` as `PRINTIFY_SHOP_ID=...`.
+5. Restart `npm run dev`.
 
-2. **Setup API key**
-   ```bash
-   cp .env.example .env
-   ```
-   Add your OpenAI API key to `.env`
-
-3. **Generate ideas**
-   ```bash
-   npm run generate
-   ```
-
-   Or directly:
-   ```bash
-   npx ts-node --esm src/cli.ts generate
-   ```
-
-## Usage Examples
-
-### Basic generation
-```bash
-npm run generate -- --count 5
-```
-
-### Themed generation with image focus
-```bash
-# Dinosaur themed (with image prompts optimized for light/dark clothing)
-npm run generate -- --theme "dinosaur" --count 3
-
-# Generate actual DALL-E 3 images (recommended for top quality)
-npm run generate -- --theme "parenting fail" --images
-
-# Trending memes with maximum image quality
-npm run generate -- --style "trending" --images --count 2
-```
-
-### JSON output (for scripting)
-```bash
-npm run generate -- --json > ideas.json
-```
-
-### Output to specific folder
-```bash
-npm run generate -- --output ./new-ideas --count 10
-```
-
-## Project Structure
+After your first successful generation, browse `designs/<slug>/manifest.json` and inspect `printify_mockups[].print_provider_id`. If you like that provider's mockup style, pin it in `.env.local`:
 
 ```
-.
-├── src/                    # Optional CLI generator (OpenAI-based; not required for Cursor-native flow)
-│   ├── cli.ts              # Command-line entry
-│   ├── ai.ts               # AI service with BanterWearCo system prompt
-│   └── types.ts            # Zod schemas for structured output
-├── scripts/
-│   ├── finalize-design.mjs # ONE-command pipeline: creates designs/<slug>/, copies PNGs, makes transparent, writes manifest
-│   └── make-transparent.mjs# Converts white/near-white backgrounds to transparent (supports --inplace)
-├── designs/                # One folder per concept (print files, mockups, manifest)
-│   └── <concept-slug>/
-│       ├── <concept-slug>-light.png
-│       ├── <concept-slug>-dark.png
-│       ├── <concept-slug>-mockup-1.png
-│       ├── <concept-slug>-mockup-2.png
-│       ├── <concept-slug>-mockup-3.png
-│       └── manifest.json
-├── .cursor/rules/          # Agent behavior (brand voice + generator rules)
-├── .cursorrules            # Master rule file used by Cursor
-├── DESIGN.md               # Architecture and design decisions
-├── PROMPTS.md              # System and user prompts
-├── AGENTS.md               # Instructions for using this as an AI coding agent
-├── SKILL.md                # Cursor skill description
-└── package.json
+PRINTIFY_PRINT_PROVIDER_ID_PREFERRED=99
 ```
 
-## Printify Workflow (Cursor-native, asset-first)
+## Cost guardrail
 
-Every idea is produced as a self-contained listing package inside its own folder under `designs/<slug>/`:
+FLUX.2-pro is the dominant cost. The app enforces a daily cap (default **15 ideas/day** = 30 FLUX calls). At ~$0.10/image that's ~$3/day, leaving headroom for the LLM and any retries within your $50/month Azure credit. Adjust via `FLUX_DAILY_CAP=` in `.env.local`. Usage state is persisted to `data/usage.json` (gitignored).
 
-1. Ask Cursor to generate an idea ("create a new design", "give me 3 ideas", etc.)
-2. The agent generates the `-light` + `-dark` print files, runs `scripts/finalize-design.mjs` to save them into `designs/<slug>/` and make them transparent, then generates 1-3 lifestyle mockups of a person wearing the shirt into the same folder
-3. Open `designs/<slug>/` → upload `<slug>-light.png` and `<slug>-dark.png` to Printify, assign each variant to the matching shirt colors listed in the package
-4. Use the mockups from the same folder as Etsy listing photos
-5. Paste the title, description, 13 tags, and keywords from the package (or from `manifest.json`) directly into the Etsy/Printify listing
-6. Publish
+## What's in the repo
 
-**Why two variants?** The `-light` file uses darker pigments and black outlines so it reads on white shirts. The `-dark` file uses saturated mid-tone fills (hot pink / neon yellow / electric blue / mint / lime) with black outlines so it pops on black shirts without getting eaten by the transparency pass.
-
-**Manual pipeline (rarely needed):**
 ```
-# Make any existing white-background PNG transparent in place
-node scripts/make-transparent.mjs designs/<slug>/<slug>-light.png --inplace
-
-# Re-finalize a folder after generating new assets
-node scripts/finalize-design.mjs <slug>
+app/                          Next.js App Router pages + API routes (SSE)
+  page.tsx                    Home: generate form + design grid
+  designs/[slug]/page.tsx     Detail page: variants, mockups, copy blocks, regenerate buttons
+  api/generate/               POST: streams the full pipeline
+  api/designs/[slug]/         POST {step: ...} streams per-step regenerate
+  api/printify/upload/        POST {slug}: upload existing design to Printify
+  api/asset/[slug]/[file]/    GET: serves files from designs/<slug>/
+lib/                          Server-only orchestration
+  pipeline.ts                 The async generator that produces a complete design
+  printify.ts                 Printify REST client (uploads, mockups, blueprint lookup)
+  transparency.ts             sharp-based alpha inspection + near-white key-out
+  storage.ts                  designs/<slug>/ helpers + listing-standard.json + usage.json
+  env.ts                      env detection + envStatus()
+  sse.ts                      AsyncGenerator -> text/event-stream Response
+src/                          Reusable libraries
+  ai.ts                       BanterAI — Azure OpenAI / OpenAI chat
+  flux.ts                     generateFluxBuffer() — Azure FLUX.2-pro
+  llm.ts                      Azure client factories + Responses API helpers
+  types.ts                    ProductIdea + DesignManifest schemas
+components/                   Tailwind UI
+data/listing-standard.json    Locked product features / care / footer copy
+designs/<slug>/               Generated assets + manifest.json (one folder per design)
 ```
 
-## Development
+## End-to-end test
 
-```bash
-npm run dev          # Run with live reload
-npm run build        # Build to dist/
-npm run generate     # Quick generate
-```
-
-## Brand Voice Examples
-
-From the store:
-- "Nobody Needs This Much Baby Oil Shower Curtain"
-- "Psycho Bakery" humor
-- Dinosaur "The Struggle Is Real" shower curtains
-- "This is where I slipped and ruined everything"
-
-The AI is trained to continue this exact voice.
-
----
-
-**Built for BanterWearCo - Making the internet laugh one shirt at a time.**
-
-Made with ❤️ and too much sarcasm.
+1. `npm run dev`, open `http://localhost:3000`
+2. Type a theme like `"grumpy cat barista"`, click **Generate**
+3. The progress stream should show: idea → flux.light → flux.dark → printify uploads → mockups → manifest write → done
+4. Auto-redirect to `/designs/grumpy-cat-barista` showing both transparent variants on a checkerboard, mockup gallery, and copy-to-clipboard blocks for title / tags / keywords / description
+5. Open Printify dashboard → **Media library** to confirm the two PNGs are uploaded

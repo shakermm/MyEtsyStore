@@ -1,169 +1,168 @@
 import OpenAI from 'openai';
 import { z } from 'zod';
-import { ProductIdeaSchema, type ProductIdea, type GenerationOptions } from './types.js';
-import dotenv from 'dotenv';
-
-dotenv.config();
-
-const openai = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY || '',
-});
+import { ProductIdeaSchema, type ProductIdea, type GenerationOptions } from './types';
+import {
+  createAzureOpenAiResponsesClient,
+  createIdeaChatClient,
+  extractResponsesOutputText,
+} from './llm';
 
 export class BanterAI {
   private systemPrompt: string;
+  private readonly chat: OpenAI;
+  private readonly chatModel: string;
+  private readonly chatProvider: 'azure' | 'openai';
 
   constructor() {
-    this.systemPrompt = `You are the creative director for BanterWearCo, an Etsy Print-on-Demand store specializing in hilarious, sarcastic, and relatable apparel and home goods.
+    const { client, model, provider } = createIdeaChatClient();
+    this.chat = client;
+    this.chatModel = model;
+    this.chatProvider = provider;
+    this.systemPrompt = `You are the creative director for BanterWearCo, an Etsy Print-on-Demand store specializing in hilarious, sarcastic, and relatable apparel.
 
-IMAGE QUALITY IS THE HIGHEST PRIORITY. Every design must be:
-- Top-tier, unique, and professionally executed
-- HIGH CONTRAST and visible on BOTH black AND white garments
-- Print-ready with clean lines, appropriate stroke weights, and strategic color choices
-- Suitable for both light and dark clothing (use outlines, strategic negative space, or dual-color variants)
+OUTPUT IS PRODUCTION-CRITICAL — every field is consumed by an automated pipeline (LLM -> FLUX.2-pro x2 -> Printify upload -> mockup generation -> Etsy listing).
 
 Brand Voice:
-- Witty, irreverent, and self-deprecating humor
-- References to "the struggle is real", parenting fails, adulting, pop culture, dinosaurs, bathroom humor, absurd situations
-- Examples from store: "Nobody needs this much baby oil", "Psycho Bakery", "This is where I slipped and ruined everything", dinosaur shower curtains
-- Clean, bold graphic designs with strong text + clever minimalist illustrations
-- Target audience: millennials, parents, gamers, people who love dark humor and memes
+- Witty, irreverent, self-deprecating; relatable millennial / parent / gamer humor
+- Bestseller examples: "Nobody needs this much baby oil", "Therapy is cheaper than wine", "Dada Daddy Dad Bruh", "Fueled by spite and iced coffee"
+- Clean bold typography + minimalist illustration. Strong central concept per design.
 
-IMAGE PROMPT REQUIREMENTS (CRITICAL):
-- Must specify "works on both black and white shirts", "high contrast design", "print ready vector style"
-- Include specific typography (bold sans-serif, impact font, good stroke/outline for readability)
-- Recommend color palettes that pop on both light AND dark backgrounds
-- Specify transparent background option with subtle shadow or outline for versatility
-- Professional composition with strong focal point, excellent negative space, and balanced layout
-- Style references: "clean vector illustration, premium POD design, high quality graphic tee aesthetic, sharp lines, professional print design"
+TWO IMAGE PROMPTS (CRITICAL — both go to FLUX.2-pro):
+- lightImagePrompt: design printed on LIGHT shirts (white, cream, heather). Use DARK inks: black, deep navy, maroon, forest green. High contrast, crisp linework.
+- darkImagePrompt: design printed on DARK shirts (black, navy, asphalt, forest). Use BRIGHT SATURATED fills: hot pink, neon yellow, electric blue, mint teal, lime green, magenta. NEVER cream / off-white / pastel inside the design — they look dirty on dark fabric.
+- BOTH prompts must specify: transparent background, print-ready vector style, no photorealism, no shirt mockup in the image (just the artwork itself).
+- FLUX SAFETY: PG-rated only. No weapons, combat, blood, realistic armor, aggressive poses. For fantasy figures use soft mascot / plush / costume style — never swords, never battle poses.
 
-Guidelines for ideas:
-- Always funny, trending or timelessly relatable
-- One strong central concept per design with punchy text
-- Visuals must be clever but simple enough for high-quality screen printing/DTG
-- Incorporate current memes, holidays, viral trends when relevant
-- Avoid anything offensive - focus on self-roasting and absurdism
+DESCRIPTION RULES:
+- 200-350 word creative section ONLY. Hook (1-2 lines) + emotional angle + "Perfect for:" bullets + DETAILS bullets (fit, two print variants, what is on the shirt, made-to-order).
+- DO NOT include product features, care instructions, or sign-off — those are appended programmatically from data/listing-standard.json.
 
-Generate ideas that would perform well on Etsy in the "funny t-shirts", "sarcastic shirts", "humor apparel" categories. Image quality must be exceptional.`;
+TAGS & KEYWORDS:
+- tags: EXACTLY 13 (Etsy hard limit). Long-tail, lowercase, no special chars.
+- keywords: 10-15 distinct SEO phrases (different angle than tags — search intent style).
+
+RECOMMENDED SHIRT COLORS:
+- light: 4-6 light Bella Canvas colors that pair with the dark-ink design
+- dark: 4-6 dark Bella Canvas colors that pair with the bright-fill design
+
+Return ONE valid JSON object. No markdown fences. No commentary.`;
   }
 
   async generateIdea(options: GenerationOptions = {}): Promise<ProductIdea> {
-    const { theme = '', style = 'all' } = options;
+    const { theme = '', style = 'random' } = options;
 
-    const userPrompt = `Generate ONE highly creative product idea for BanterWearCo.
+    const userPrompt = `Generate ONE product idea for BanterWearCo.
 
-${theme ? `Theme focus: ${theme}` : 'Focus on funny, trending, or absurd everyday situations.'}
+${theme ? `Theme focus: ${theme}` : 'Pick any funny / trending / absurd everyday situation.'}
 
 Style preference: ${style}
 
-CRITICAL: Image quality is the TOP priority. The design must be unique, top-tier, and work excellently on BOTH light and dark clothing. Use high contrast, smart color choices, outlines where needed, and professional composition.
-
-Return ONLY a valid JSON object matching this schema exactly. Do not include any other text, markdown, or explanations:
+Return ONLY this JSON shape — every field required unless marked optional:
 
 {
-  "concept": "short catchy slogan or idea",
-  "title": "Etsy title under 140 chars",
-  "description": "Full rich description (300-500 words recommended for SEO)",
-  "tags": ["tag1", "tag2", "... up to 20 high quality tags"],
-  "imagePrompt": "EXTREMELY detailed prompt for DALL-E 3 or Flux. Must include: high contrast, works on black and white shirts, print-ready vector style, specific typography with stroke/outline, professional composition, color palette that pops on both backgrounds, transparent background option",
-  "printReadyPrompt": "Specialized prompt optimized for POD - includes exact typography specs, color palette recommendations for dual-shirt compatibility, print quality requirements, and production notes",
-  "category": "tshirt|hoodie|shower-curtain|etc",
-  "humorStyle": "e.g. sarcastic dad joke with dinosaur twist",
-  "trendingAngle": "optional current meme reference",
-  "colorStrategy": "Detailed explanation of how this design maintains visibility and impact on both light and dark garments"
-}
-
-The image prompts must be world-class. Think like a senior graphic designer who specializes in premium humorous POD apparel. Every design should feel like it could be a bestseller.`;
+  "concept": "short catchy slogan or core idea",
+  "title": "Etsy title under 140 chars, packed with searchable phrases",
+  "description": "200-350 word creative section: hook + Perfect for bullets + DETAILS bullets. NO product features / care / footer.",
+  "tags": ["exactly", "thirteen", "tags", "lowercase"],
+  "keywords": ["10 to 15 long-tail SEO keywords"],
+  "lightImagePrompt": "FLUX prompt for the LIGHT-shirt variant — dark inks, transparent background, vector style, no photorealism, no shirt mockup",
+  "darkImagePrompt": "FLUX prompt for the DARK-shirt variant — bright saturated fills (hot pink/neon yellow/electric blue/mint teal/lime/magenta), transparent background, vector style",
+  "imagePrompt": "Shared concept summary (used as fallback)",
+  "printReadyPrompt": "POD print specs: typography, stroke weights, palette",
+  "category": "tshirt",
+  "humorStyle": "e.g. sarcastic dad joke, relatable burnout",
+  "trendingAngle": "optional meme/trend tie-in",
+  "colorStrategy": "How the design pops on both light and dark variants",
+  "recommendedShirtColors": {
+    "light": ["White", "Natural", "Heather Dust", "Ash"],
+    "dark": ["Black", "Navy", "Asphalt", "Forest"]
+  }
+}`;
 
     try {
-      const completion = await openai.chat.completions.create({
-        model: 'gpt-4o-mini',
-        messages: [
-          { role: 'system', content: this.systemPrompt },
-          { role: 'user', content: userPrompt }
-        ],
-        temperature: 0.9,
-        max_tokens: 1500,
-        response_format: { type: 'json_object' },
-      });
+      const lowerModel = this.chatModel.toLowerCase();
+      const azureGpt5 = this.chatProvider === 'azure' && lowerModel.includes('gpt-5');
+      const requestModel =
+        process.env.AZURE_OPENAI_CHAT_MODEL?.trim() || this.chatModel;
+      const maxAzureGpt5Tokens = Number(
+        process.env.AZURE_OPENAI_MAX_COMPLETION_TOKENS?.trim() || '16384'
+      );
 
-      const content = completion.choices[0].message.content;
-      if (!content) {
-        throw new Error('No content received from AI');
+      let content: string;
+
+      if (azureGpt5) {
+        const ep = process.env.AZURE_OPENAI_ENDPOINT?.trim();
+        const key = process.env.AZURE_OPENAI_API_KEY?.trim();
+        const dep = process.env.AZURE_OPENAI_DEPLOYMENT?.trim();
+        if (!ep || !key || !dep) {
+          throw new Error('Azure OpenAI endpoint, API key, and deployment are required.');
+        }
+
+        const preferChat = process.env.AZURE_OPENAI_GPT5_USE_CHAT === '1';
+        const noResponses = process.env.AZURE_OPENAI_DISABLE_RESPONSES_FALLBACK === '1';
+        if (!preferChat && noResponses) {
+          throw new Error(
+            'Azure GPT-5 uses Responses by default. Remove AZURE_OPENAI_DISABLE_RESPONSES_FALLBACK, or set AZURE_OPENAI_GPT5_USE_CHAT=1 for chat.completions.'
+          );
+        }
+
+        const runResponses = async () => {
+          const rClient = createAzureOpenAiResponsesClient(ep, key, dep);
+          const response = await rClient.responses.create({
+            model: requestModel,
+            instructions: this.systemPrompt,
+            input: userPrompt,
+            max_output_tokens: Math.min(maxAzureGpt5Tokens, 8192),
+          });
+          return extractResponsesOutputText(response);
+        };
+
+        if (!preferChat) {
+          content = await runResponses();
+        } else {
+          try {
+            const completion = await this.chat.chat.completions.create({
+              model: requestModel,
+              messages: [
+                { role: 'system', content: this.systemPrompt },
+                { role: 'user', content: userPrompt },
+              ],
+              max_completion_tokens: maxAzureGpt5Tokens,
+            });
+            content = completion.choices[0].message.content ?? '';
+          } catch (err: unknown) {
+            const status = (err as { status?: number })?.status;
+            if (noResponses || status !== 400) throw err;
+            content = await runResponses();
+          }
+        }
+      } else {
+        const completion = await this.chat.chat.completions.create({
+          model: this.chatModel,
+          messages: [
+            { role: 'system', content: this.systemPrompt },
+            { role: 'user', content: userPrompt },
+          ],
+          temperature: 0.9,
+          max_tokens: 2500,
+          response_format: { type: 'json_object' },
+        });
+        content = completion.choices[0].message.content ?? '';
       }
 
-      const parsed = JSON.parse(content);
-      const idea = ProductIdeaSchema.parse(parsed);
+      if (!content) throw new Error('No content received from AI');
 
-      return idea;
+      content = content.trim();
+      const fence = content.match(/^```(?:json)?\s*([\s\S]*?)```$/m);
+      if (fence) content = fence[1].trim();
+
+      const parsed = JSON.parse(content);
+      return ProductIdeaSchema.parse(parsed);
     } catch (error) {
-      console.error('AI Generation Error:', error);
       if (error instanceof z.ZodError) {
         console.error('Schema validation failed:', error.issues);
       }
       throw error;
     }
-  }
-
-  async generateMultiple(count: number = 3, options: GenerationOptions = {}): Promise<ProductIdea[]> {
-    const ideas: ProductIdea[] = [];
-    for (let i = 0; i < count; i++) {
-      try {
-        const idea = await this.generateIdea(options);
-        ideas.push(idea);
-        // Small delay to avoid rate limits
-        if (i < count - 1) await new Promise(r => setTimeout(r, 800));
-      } catch (e) {
-        console.warn(`Failed to generate idea ${i + 1}, skipping...`);
-      }
-    }
-    return ideas;
-  }
-
-  /**
-   * Generate actual images using DALL-E 3 for top quality results
-   */
-  async generateImage(imagePrompt: string, concept: string, index: number = 0): Promise<string | null> {
-    try {
-      console.log(`🎨 Generating high-quality image for: ${concept}`);
-
-      const response = await openai.images.generate({
-        model: "dall-e-3",
-        prompt: `${imagePrompt}\n\nStyle requirements: professional humorous t-shirt design, premium POD quality, clean vector aesthetic, highly detailed, commercial quality, trending on Etsy.`,
-        n: 1,
-        size: "1024x1024",
-        quality: "standard",
-        response_format: "url",
-      });
-
-      const imageUrl = response.data?.[0]?.url;
-      if (!imageUrl) {
-        console.warn('No image URL returned from DALL-E 3');
-        return null;
-      }
-
-      console.log(`✅ Image generated successfully for idea #${index + 1}`);
-      return imageUrl;
-    } catch (error) {
-      console.error('Image generation failed:', error);
-      return null;
-    }
-  }
-
-  async generateIdeasWithImages(count: number = 3, options: GenerationOptions = {}): Promise<Array<ProductIdea & { imageUrl?: string }>> {
-    const ideas = await this.generateMultiple(count, options);
-    const results: Array<ProductIdea & { imageUrl?: string }> = [];
-
-    for (let i = 0; i < ideas.length; i++) {
-      const idea = ideas[i];
-      const imageUrl = await this.generateImage(idea.imagePrompt, idea.concept, i);
-      results.push({
-        ...idea,
-        imageUrl: imageUrl || undefined,
-      });
-      // Longer delay between image generations (DALL-E 3 is slower/expensive)
-      if (i < ideas.length - 1) await new Promise(r => setTimeout(r, 15000));
-    }
-
-    return results;
   }
 }
