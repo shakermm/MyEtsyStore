@@ -333,21 +333,31 @@ export async function createUniversalProduct(
   }
 
   if (options.publish) {
-    try {
-      await pf('POST', `/shops/${shopId}/products/${product.id}/publish.json`, {
-        title: true,
-        description: true,
-        images: true,
-        variants: true,
-        tags: true,
-      });
-      product.published_at = new Date().toISOString();
-    } catch (error) {
-      console.warn(`Failed to publish product ${product.id}:`, error);
-    }
+    // Throws on failure so the pipeline can surface the error to the UI instead
+    // of silently "succeeding" with an unpublished product.
+    await publishProduct(product.id);
+    product.published_at = new Date().toISOString();
   }
 
   return product;
+}
+
+/**
+ * Publish a Printify product to its connected sales channel (Etsy / Shopify / etc.).
+ * Requires the Printify shop to have a sales channel connected — a "Manual" shop
+ * will return `422 Unprocessable Entity` here.
+ *
+ * Throws on any non-2xx response (caller must handle / surface).
+ */
+export async function publishProduct(productId: string): Promise<void> {
+  const { shopId } = requirePrintify();
+  await pf('POST', `/shops/${shopId}/products/${productId}/publish.json`, {
+    title: true,
+    description: true,
+    images: true,
+    variants: true,
+    tags: true,
+  });
 }
 
 export async function createProduct(

@@ -19,6 +19,7 @@ import { envStatus } from './env';
 import {
   createUniversalProduct,
   downloadMockupImages,
+  publishProduct,
   replaceProductImage,
   uploadImageBase64,
 } from './printify';
@@ -33,6 +34,8 @@ export type PipelineEvent =
   | { type: 'printify.upload.done'; imageId: string }
   | { type: 'printify.products.start' }
   | { type: 'printify.products.done'; count: number; productIds: string[] }
+  | { type: 'printify.publish.start'; productId: string }
+  | { type: 'printify.publish.done'; productId: string }
   | { type: 'printify.mockups.start' }
   | { type: 'printify.mockups.done'; count: number }
   | { type: 'manifest.write'; slug: string }
@@ -423,17 +426,95 @@ export async function* createProductsForDesign(
   } as unknown as ProductIdea;
 
   yield { type: 'printify.products.start' };
+  let product;
   try {
-    const product = await createUniversalProduct(idea, imageId, { publish: opts.publish });
+    // Always create as draft first; publish is a separate, visible step below
+    // so errors can be surfaced to the UI instead of silently swallowed.
+    product = await createUniversalProduct(idea, imageId, { publish: false });
     await writeManifest({
       ...manifest,
       printify_products: [...(manifest.printify_products ?? []), product],
     });
     yield { type: 'printify.products.done', count: 1, productIds: [product.id] };
     yield { type: 'manifest.write', slug };
-    yield { type: 'done', slug };
   } catch (err) {
     yield { type: 'error', step: 'printify.products', message: stringifyError(err) };
+    return;
+  }
+
+  if (opts.publish) {
+    yield { type: 'printify.publish.start', productId: product.id };
+    try {
+      await publishProduct(product.id);
+      // Refresh manifest with published_at timestamp.
+      const current = await readManifest(slug);
+      if (current) {
+        const updated = (current.printify_products ?? []).map(p =>
+          p.id === product.id ? { ...p, published_at: new Date().toISOString() } : p
+        );
+        await writeManifest({ ...current, printify_products: updated });
+      }
+      yield { type: 'printify.publish.done', productId: product.id };
+    } catch (err) {
+      yield {
+        type: 'error',
+        step: 'printify.publish',
+        message:
+          `Publish failed for ${product.id}: ${stringifyError(err)}. ` +
+          `Common cause: the Printify shop has no sales channel connected (Manual shop). ` +
+          `Connect Etsy / Shopify in Printify → My Stores, then retry.`,
+      };
+      return;
+    }
+  }
+
+  yield { type: 'done', slug };
+}
+
+/**
+ * Publish an already-created Printify product to its connected sales channel.
+ * Use this when the user wants to publish a draft without creating a duplicate.
+ */
+export async function* publishExistingProduct(slug: string): AsyncGenerator<PipelineEvent> {
+  const env = envStatus();
+  if (!env.printify) {
+    yield { type: 'error', step: 'env', message: 'Printify not configured' };
+    return;
+  }
+  const manifest = await readManifest(slug);
+  if (!manifest) {
+    yield { type: 'error', step: 'manifest', message: `No manifest for slug ${slug}` };
+    return;
+  }
+  const product = manifest.printify_products?.[0];
+  if (!product) {
+    yield {
+      type: 'error',
+      step: 'printify.publish',
+      message: 'No Printify product on this design. Run "Create Printify product" first.',
+    };
+    return;
+  }
+
+  yield { type: 'printify.publish.start', productId: product.id };
+  try {
+    await publishProduct(product.id);
+    const updated = (manifest.printify_products ?? []).map(p =>
+      p.id === product.id ? { ...p, published_at: new Date().toISOString() } : p
+    );
+    await writeManifest({ ...manifest, printify_products: updated });
+    yield { type: 'printify.publish.done', productId: product.id };
+    yield { type: 'manifest.write', slug };
+    yield { type: 'done', slug };
+  } catch (err) {
+    yield {
+      type: 'error',
+      step: 'printify.publish',
+      message:
+        `Publish failed: ${stringifyError(err)}. ` +
+        `Common cause: the Printify shop has no sales channel connected (Manual shop). ` +
+        `Connect Etsy / Shopify in Printify → My Stores, then retry.`,
+    };
   }
 }
 

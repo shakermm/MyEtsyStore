@@ -9,7 +9,8 @@ type Step =
   | 'mockups'
   | 'printify.upload'
   | 'printify.products'
-  | 'printify.products.publish';
+  | 'printify.products.publish'
+  | 'printify.publish';
 
 const STEP_LABELS: Record<Step, string> = {
   flux: 'Regenerate image',
@@ -17,11 +18,13 @@ const STEP_LABELS: Record<Step, string> = {
   'printify.upload': 'Upload to Printify',
   'printify.products': 'Create Printify product (draft)',
   'printify.products.publish': 'Create & publish Printify product',
+  'printify.publish': 'Publish existing product',
 };
 
 function stepBody(step: Step): Record<string, unknown> {
   if (step === 'printify.products') return { step: 'printify.products' };
   if (step === 'printify.products.publish') return { step: 'printify.products', publish: true };
+  if (step === 'printify.publish') return { step: 'printify.publish' };
   return { step };
 }
 

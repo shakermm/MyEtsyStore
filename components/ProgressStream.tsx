@@ -12,6 +12,7 @@ export type StreamEvent = {
   imageId?: string;
   count?: number;
   productIds?: string[];
+  productId?: string;
   idea?: { title?: string; concept?: string };
 };
 
@@ -135,6 +136,10 @@ function formatEvent(e: StreamEvent): string {
       return 'Creating Printify product...';
     case 'printify.products.done':
       return `Printify product created (${e.count}) · IDs: ${e.productIds?.join(', ')}`;
+    case 'printify.publish.start':
+      return `Publishing to sales channel · product=${e.productId}...`;
+    case 'printify.publish.done':
+      return `✓ Published · product=${e.productId}`;
     case 'printify.mockups.start':
       return 'Printify mockups...';
     case 'printify.mockups.done':
