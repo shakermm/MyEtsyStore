@@ -25,12 +25,10 @@ export function createIdeaChatClient(): { client: OpenAI; model: string; provide
   const endpoint = process.env.AZURE_OPENAI_ENDPOINT?.trim();
   const apiKey = process.env.AZURE_OPENAI_API_KEY?.trim();
   const deployment = process.env.AZURE_OPENAI_DEPLOYMENT?.trim();
-  // GPT-5 on Azure (Microsoft sample): api-version 2024-12-01-preview + chat.completions.
+  // Use stable API version that works with GPT-4o
   const apiVersion =
     process.env.AZURE_OPENAI_API_VERSION?.trim() ||
-    (deployment && deployment.toLowerCase().includes('gpt-5')
-      ? '2024-12-01-preview'
-      : '2024-08-01-preview');
+    '2024-06-01';
 
   if (endpoint && apiKey && deployment) {
     const client = new AzureOpenAI({
