@@ -72,6 +72,13 @@ export interface PrintifyProduct {
     options: PrintifyVariantOption;
   }>;
   images: PrintifyMockupImage[];
+  print_areas?: Array<{
+    variant_ids: number[];
+    placeholders: Array<{
+      position: string;
+      images: Array<{ id: string; x: number; y: number; scale: number; angle: number }>;
+    }>;
+  }>;
   created_at: string;
   published_at?: string;
   shop_id: number;

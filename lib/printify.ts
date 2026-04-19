@@ -468,6 +468,33 @@ function getScaleForProduct(category: string): number {
   return scales[category] || 1.0;
 }
 
+/**
+ * Fetch a Printify product and replace every image-id reference in its print_areas
+ * with `newImageId`, preserving x/y/scale/angle/variant assignments. Used when a
+ * design PNG is regenerated and re-uploaded — the product itself still points at
+ * the OLD Printify image id until this runs.
+ */
+export async function replaceProductImage(
+  productId: string,
+  newImageId: string
+): Promise<PrintifyProduct> {
+  const product = await getProduct(productId);
+  const printAreas = (product.print_areas ?? []).map(area => ({
+    variant_ids: area.variant_ids,
+    placeholders: (area.placeholders ?? []).map(ph => ({
+      position: ph.position,
+      images: (ph.images ?? []).map(img => ({
+        id: newImageId,
+        x: img.x,
+        y: img.y,
+        scale: img.scale,
+        angle: img.angle,
+      })),
+    })),
+  }));
+  return updateProduct(productId, { print_areas: printAreas } as Partial<CreateProductInput>);
+}
+
 export async function updateProduct(productId: string, updates: Partial<CreateProductInput>): Promise<PrintifyProduct> {
   const { shopId } = requirePrintify();
   return pf<PrintifyProduct>('PUT', `/shops/${shopId}/products/${productId}.json`, updates);

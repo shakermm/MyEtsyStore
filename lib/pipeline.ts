@@ -19,6 +19,7 @@ import { envStatus } from './env';
 import {
   createUniversalProduct,
   downloadMockupImages,
+  replaceProductImage,
   uploadImageBase64,
 } from './printify';
 
@@ -238,10 +239,37 @@ export async function* uploadToPrintify(slug: string): AsyncGenerator<PipelineEv
 
   yield { type: 'printify.upload.start' };
   try {
+    // Use a unique file name per upload so Printify doesn't dedupe against a
+    // previously-uploaded version (e.g. from before the user regenerated the art).
+    const uploadName = `${slug}-${Date.now()}.png`;
     const buffer = await readDesignBuffer(slug, filename);
-    const upload = await uploadImageBase64(filename, buffer);
-    await writeManifest({ ...manifest, printify_image_id: upload.id });
+    const upload = await uploadImageBase64(uploadName, buffer);
     yield { type: 'printify.upload.done', imageId: upload.id };
+
+    // Repoint every existing Printify product at the new image id — otherwise the
+    // product on Printify keeps rendering the OLD design because its print_areas
+    // still reference the old image id.
+    const existing = manifest.printify_products ?? [];
+    const updated = [] as typeof existing;
+    for (const p of existing) {
+      try {
+        const refreshed = await replaceProductImage(p.id, upload.id);
+        updated.push(refreshed);
+        yield { type: 'log', message: `Updated Printify product ${p.id} with new image.` };
+      } catch (err) {
+        yield {
+          type: 'log',
+          message: `Failed to update product ${p.id}: ${stringifyError(err)}. Keeping old reference.`,
+        };
+        updated.push(p);
+      }
+    }
+
+    await writeManifest({
+      ...manifest,
+      printify_image_id: upload.id,
+      printify_products: updated,
+    });
     yield { type: 'manifest.write', slug };
     yield { type: 'done', slug };
   } catch (err) {
