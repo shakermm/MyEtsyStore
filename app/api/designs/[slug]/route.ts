@@ -1,5 +1,10 @@
 import { NextRequest } from 'next/server';
-import { regenerateMockups, regenerateVariant, uploadToPrintify } from '@/lib/pipeline';
+import {
+  createProductsForDesign,
+  regenerateMockups,
+  regenerateVariant,
+  uploadToPrintify,
+} from '@/lib/pipeline';
 import { eventStream } from '@/lib/sse';
 import { readManifest } from '@/lib/storage';
 
@@ -16,7 +21,8 @@ export async function GET(_req: NextRequest, ctx: { params: Promise<{ slug: stri
 export async function POST(req: NextRequest, ctx: { params: Promise<{ slug: string }> }) {
   const { slug } = await ctx.params;
   const body = (await req.json().catch(() => ({}))) as {
-    step?: 'flux.light' | 'flux.dark' | 'mockups' | 'printify.upload';
+    step?: 'flux.light' | 'flux.dark' | 'mockups' | 'printify.upload' | 'printify.products';
+    publish?: boolean;
   };
 
   switch (body.step) {
@@ -28,6 +34,8 @@ export async function POST(req: NextRequest, ctx: { params: Promise<{ slug: stri
       return eventStream(regenerateMockups(slug));
     case 'printify.upload':
       return eventStream(uploadToPrintify(slug));
+    case 'printify.products':
+      return eventStream(createProductsForDesign(slug, { publish: body.publish }));
     default:
       return Response.json({ error: `unknown step: ${body.step}` }, { status: 400 });
   }

@@ -57,8 +57,8 @@ export default async function DesignDetailPage({ params }: PageProps) {
       <section className="rounded-xl border border-neutral-800 bg-neutral-900/50 p-5 text-sm">
         <h2 className="mb-3 text-base font-semibold">Recommended shirt colors</h2>
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-          <ColorList label="Light variant" colors={manifest.recommended_shirt_colors.light_variant} />
-          <ColorList label="Dark variant" colors={manifest.recommended_shirt_colors.dark_variant} />
+          <ColorList label="Light variant" colors={manifest.recommended_product_colors.light_variant} />
+          <ColorList label="Dark variant" colors={manifest.recommended_product_colors.dark_variant} />
         </div>
       </section>
 

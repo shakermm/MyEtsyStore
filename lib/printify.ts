@@ -371,7 +371,8 @@ export async function generateMockups(input: MockupGenInput): Promise<PrintifyMo
   const chosen = pickVariantByPalette(variantsResp.variants, input.variant);
   if (!chosen) throw new Error(`No suitable variant for palette ${input.variant}`);
 
-  const product = await createDraftProduct({
+  const { shopId } = requirePrintify();
+  const product = await pf<PrintifyProduct>('POST', `/shops/${shopId}/products.json`, {
     title: `[mockup] ${input.title}`.slice(0, 140),
     description: input.description.slice(0, 500),
     blueprint_id: blueprintId,

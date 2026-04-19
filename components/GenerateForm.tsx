@@ -29,7 +29,7 @@ export default function GenerateForm({ llmReady, fluxReady, printifyReady }: Gen
   const [style, setStyle] = useState<'funny' | 'trending' | 'unique' | 'random'>('random');
   const [category, setCategory] = useState<string>('tshirt');
   const [mockupsPerVariant, setMockupsPerVariant] = useState(2);
-  const [createProducts, setCreateProducts] = useState(false);
+  const [createProducts, setCreateProducts] = useState(true);
   const [publishProducts, setPublishProducts] = useState(false);
   const [running, setRunning] = useState(false);
   const [bodyKey, setBodyKey] = useState(0);

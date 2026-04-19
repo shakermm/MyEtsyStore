@@ -4,14 +4,28 @@ import { useRouter } from 'next/navigation';
 import { useState } from 'react';
 import ProgressStream from './ProgressStream';
 
-type Step = 'flux.light' | 'flux.dark' | 'mockups' | 'printify.upload';
+type Step =
+  | 'flux.light'
+  | 'flux.dark'
+  | 'mockups'
+  | 'printify.upload'
+  | 'printify.products'
+  | 'printify.products.publish';
 
 const STEP_LABELS: Record<Step, string> = {
   'flux.light': 'Regenerate light variant',
   'flux.dark': 'Regenerate dark variant',
   mockups: 'Regenerate mockups',
   'printify.upload': 'Upload to Printify',
+  'printify.products': 'Create Printify products (draft)',
+  'printify.products.publish': 'Create & publish Printify products',
 };
+
+function stepBody(step: Step): Record<string, unknown> {
+  if (step === 'printify.products') return { step: 'printify.products' };
+  if (step === 'printify.products.publish') return { step: 'printify.products', publish: true };
+  return { step };
+}
 
 export default function DesignActions({ slug }: { slug: string }) {
   const router = useRouter();
@@ -42,7 +56,7 @@ export default function DesignActions({ slug }: { slug: string }) {
         <ProgressStream
           key={streamKey}
           url={`/api/designs/${slug}`}
-          body={{ step: activeStep }}
+          body={stepBody(activeStep)}
           startLabel={STEP_LABELS[activeStep]}
           onDone={() => {
             setActiveStep(null);

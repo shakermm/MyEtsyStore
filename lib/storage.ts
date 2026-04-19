@@ -83,6 +83,7 @@ function normalizeManifest(raw: any): DesignManifest {
     mockups: Array.isArray(raw.mockups) ? raw.mockups : [],
     printify_image_ids: raw.printify_image_ids ?? {},
     printify_mockups: Array.isArray(raw.printify_mockups) ? raw.printify_mockups : [],
+    printify_products: Array.isArray(raw.printify_products) ? raw.printify_products : [],
     qa_reviews: raw.qa_reviews,
     created_at: raw.created_at ?? new Date(0).toISOString(),
   };
