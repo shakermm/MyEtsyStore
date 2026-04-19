@@ -15,7 +15,10 @@
       "Bash(curl -s -o /dev/null -w \"detail: HTTP %{http_code}\\\\n\" http://localhost:3000/designs/dada-daddy-dad-bruh)",
       "Bash(curl -s -o /dev/null -w \"asset: HTTP %{http_code}\\\\n\" http://localhost:3000/api/asset/dada-daddy-dad-bruh/dada-daddy-dad-bruh-light.png)",
       "Bash(python -c \"import sys, json; d=json.load\\(sys.stdin\\); print\\(f'{len\\(d\\)} designs:'\\); [print\\(' -', m['slug'], '|', m['title'][:50]\\) for m in d]\")",
-      "Bash(node -e \"let s=''; process.stdin.on\\('data',d=>s+=d\\); process.stdin.on\\('end',\\(\\)=>{const arr=JSON.parse\\(s\\); console.log\\(arr.length+' designs:'\\); arr.forEach\\(m=>console.log\\(' -',m.slug,'|',\\(m.title||''\\).slice\\(0,60\\)\\)\\);}\\)\")"
+      "Bash(node -e \"let s=''; process.stdin.on\\('data',d=>s+=d\\); process.stdin.on\\('end',\\(\\)=>{const arr=JSON.parse\\(s\\); console.log\\(arr.length+' designs:'\\); arr.forEach\\(m=>console.log\\(' -',m.slug,'|',\\(m.title||''\\).slice\\(0,60\\)\\)\\);}\\)\")",
+      "Bash(netstat -ano)",
+      "Bash(taskkill //F //PID 11956)",
+      "Bash(taskkill //F //PID 16272)"
     ]
   }
 }

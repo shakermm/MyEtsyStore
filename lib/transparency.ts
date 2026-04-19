@@ -1,6 +1,36 @@
 import 'server-only';
 import sharp from 'sharp';
 
+/**
+ * Send a PNG buffer to the remove.bg REST API and return a clean transparent PNG.
+ * Throws on HTTP error — caller catches and falls through to the algorithmic pipeline.
+ *
+ * API docs: https://www.remove.bg/api
+ * Auth: X-Api-Key header (not Bearer).
+ * Request: multipart/form-data with image_file + size=auto.
+ * Response: PNG bytes directly in the body (not JSON).
+ * Credits: 1 credit per call with size=auto; free tier = 50 credits/month.
+ */
+async function removeBgApi(buffer: Buffer, apiKey: string): Promise<Buffer> {
+  const form = new FormData();
+  form.append('image_file', new Blob([new Uint8Array(buffer)], { type: 'image/png' }), 'image.png');
+  form.append('size', 'auto');
+
+  const res = await fetch('https://api.remove.bg/v1.0/removebg', {
+    method: 'POST',
+    headers: { 'X-Api-Key': apiKey },
+    body: form,
+  });
+
+  if (!res.ok) {
+    const errText = await res.text().catch(() => '');
+    throw new Error(`remove.bg HTTP ${res.status}: ${errText.slice(0, 400)}`);
+  }
+
+  const arrayBuf = await res.arrayBuffer();
+  return sharp(Buffer.from(arrayBuf)).ensureAlpha().png().toBuffer();
+}
+
 export interface AlphaInfo {
   channels: number;
   hasMeaningfulAlpha: boolean;
@@ -181,7 +211,7 @@ export async function softChromaKey(
   bg: { r: number; g: number; b: number },
   hardThreshold = 30,
   softThreshold = 90,
-  radius = 3
+  radius = 6
 ): Promise<Buffer> {
   const { data, info } = await sharp(buffer).ensureAlpha().raw().toBuffer({ resolveWithObject: true });
   const { width, height } = info;
@@ -246,32 +276,42 @@ export async function softChromaKey(
 }
 
 /**
- * Full background removal pipeline — designed to produce clean cutouts 100% of the time
- * regardless of whether FLUX returns transparent, solid white, or a noisy colored bg.
+ * Full background removal pipeline — produces clean cutouts regardless of whether
+ * FLUX returns a transparent, solid-white, or noisy-colored background.
  *
  *   1. If the image already has meaningful alpha, return unchanged.
- *   2. Sample the dominant border color (mode over all 4 edges).
- *   3. Flood-fill from the corners with generous tolerance to nuke the bulk bg.
- *   4. Soft chroma-key against the sampled bg color to kill anti-aliased halos.
- *   5. Fall back to pure-white keyer if the sampled bg was near-white and flood missed.
+ *   2. If REMOVE_BG_API_KEY is set, delegate to remove.bg (ML-quality results).
+ *      Falls through to the algorithmic pipeline on error.
+ *   3. Sample the dominant border color (mode over all 4 edges).
+ *   4. Flood-fill from corners with generous tolerance to nuke the bulk bg.
+ *   5. Soft chroma-key against the sampled bg color to kill anti-aliased halos.
+ *   6. Fall back to pure-white keyer if the sampled bg was near-white and flood missed.
  */
 export async function ensureTransparentPng(buffer: Buffer, threshold = 240): Promise<Buffer> {
   const info = await inspectAlpha(buffer);
   if (info.hasMeaningfulAlpha) return buffer;
 
+  // ML-powered removal: handles gradients, complex scenes, and fine edges cleanly.
+  const removeBgKey = process.env.REMOVE_BG_API_KEY?.trim();
+  if (removeBgKey) {
+    try {
+      const result = await removeBgApi(buffer, removeBgKey);
+      const resultInfo = await inspectAlpha(result);
+      if (resultInfo.hasMeaningfulAlpha) return result;
+    } catch (err) {
+      console.warn('[transparency] remove.bg failed, falling back to algorithmic pipeline:', err);
+    }
+  }
+
+  // Algorithmic fallback (active when REMOVE_BG_API_KEY is not set or remove.bg fails).
   const bg = (await sampleBorderColor(buffer)) ?? { r: 255, g: 255, b: 255 };
 
-  // Stage 1: flood fill from corners — kills connected background.
   let out = await floodKeyBackground(buffer, 60);
+  out = await softChromaKey(out, bg, 30, 90); // radius defaults to 6
 
-  // Stage 2: edge-band soft chroma-key — removes anti-aliased halos.
-  out = await softChromaKey(out, bg, 30, 90);
-
-  // Stage 3: GLOBAL near-bg color key, but ONLY if the sampled background is
-  // near-white. The LLM system prompt forbids pure-white artwork fills, so any
-  // remaining near-white pixel is almost certainly an enclosed bg pocket (inside
-  // letter shapes like D, O, A). For darker backgrounds we skip this pass to
-  // avoid erasing intentional light highlights on dark garments.
+  // GLOBAL near-bg color key only if bg is near-white. The LLM system prompt forbids
+  // pure-white artwork fills, so remaining near-white pixels are enclosed bg pockets
+  // (inside letter shapes like D, O, A). Skip on dark backgrounds to preserve highlights.
   const bgIsNearWhite = bg.r >= 230 && bg.g >= 230 && bg.b >= 230;
   if (bgIsNearWhite) {
     out = await keyOutWhiteBackground(out, threshold);
@@ -280,6 +320,5 @@ export async function ensureTransparentPng(buffer: Buffer, threshold = 240): Pro
   const postInfo = await inspectAlpha(out);
   if (postInfo.hasMeaningfulAlpha) return out;
 
-  // Last-resort safety net.
   return keyOutWhiteBackground(buffer, threshold);
 }

@@ -6,39 +6,8 @@ import {
   createIdeaChatClient,
   extractResponsesOutputText,
 } from './llm';
-
-/**
- * Etsy title validation bans these characters: `$`, `^`, `` ` `` (backtick). It also
- * silently flags certain "smart" Unicode punctuation as backtick-adjacent. We:
- *   - strip $, ^, `
- *   - normalize smart quotes / dashes to ASCII equivalents
- *   - collapse whitespace
- *   - trim to 140 chars
- */
-export function sanitizeEtsyTitle(raw: string): string {
-  return raw
-    // --- mojibake repair (UTF-8 decoded as CP1252 and re-encoded) -----------
-    .replace(/â€™/g, "'")   // U+2019 right single quote
-    .replace(/â€˜/g, "'")   // U+2018 left single quote
-    .replace(/â€œ/g, '"')   // U+201C left double quote
-    .replace(/â€\u009d/g, '"') // U+201D right double quote
-    .replace(/â€/g, '"')    // fallback for stripped U+201D
-    .replace(/â€"/g, '-')   // em/en dash mojibake (overlaps — last wins)
-    .replace(/â€“/g, '-')   // U+2013 en dash
-    .replace(/â€”/g, '-')   // U+2014 em dash
-    .replace(/â€¦/g, '...') // U+2026 ellipsis
-    .replace(/Ã©/g, 'e').replace(/Ã¨/g, 'e').replace(/Ã /g, 'a') // common accented mojibake
-    // --- real Unicode smart punctuation --------------------------------------
-    .replace(/[\u2018\u2019\u201B\u2032]/g, "'")
-    .replace(/[\u201C\u201D\u201F\u2033]/g, '"')
-    .replace(/[\u2013\u2014\u2015]/g, '-')
-    .replace(/[\u2026]/g, '...')
-    // --- Etsy-banned characters ---------------------------------------------
-    .replace(/[`$^]/g, '')
-    .replace(/\s+/g, ' ')
-    .trim()
-    .slice(0, 140);
-}
+import { sanitizeEtsyTitle } from './utils';
+export { sanitizeEtsyTitle };
 
 export class BanterAI {
   private systemPrompt: string;
@@ -56,17 +25,25 @@ export class BanterAI {
 OUTPUT IS PRODUCTION-CRITICAL — every field is consumed by an automated pipeline (LLM -> FLUX.2-pro (single image) -> Printify upload -> mockup generation -> Etsy listing).
 
 Brand Voice:
-- Witty, irreverent, self-deprecating; relatable millennial / parent / gamer humor
+- Witty, irreverent, self-deprecating; relatable ADULT humor (millennial / Gen-X / parent / professional / gamer)
+- Target audience: ADULTS 25-55. Themes: work burnout, marriage, parenting chaos, mortgages, midlife, dating, drinking (coffee/wine/beer), introvert life, bad sleep, social anxiety, overthinking, home ownership, anti-corporate sarcasm.
 - Bestseller examples: "Nobody needs this much baby oil", "Therapy is cheaper than wine", "Dada Daddy Dad Bruh", "Fueled by spite and iced coffee"
 - Clean bold typography + minimalist illustration. Strong central concept per design.
 
+SUBJECT DIVERSITY RULES (very important — avoid one-trick designs):
+- DO NOT default to cute animal mascots. Cats / dogs / generic mascot characters should appear in AT MOST 1 in 10 designs. The store is currently over-saturated with cat designs — actively avoid them.
+- VARY the visual subject across designs. Rotate between: bold typography-only, hands holding objects (coffee mug, wine glass, phone, beer can, controller, baby bottle), everyday objects as hero (alarm clock, calendar, laptop, vacuum, minivan), abstract icons (brain, heart, lightning, eyes), retro/vintage badges, faux-vintage seals, person silhouettes from the chest-up (no garments visible), surreal mash-ups (pizza-shaped halo, coffee IV drip).
+- When in doubt, choose TYPOGRAPHY-FIRST: a bold sarcastic phrase as the hero with one or two small supporting icons.
+- The visual must MATCH the joke. A burnout joke ≠ cat. A wine-mom joke ≠ cat. Pick the literal object/scene the line implies.
+
 SINGLE IMAGE PROMPT (CRITICAL — describes the ARTWORK ITSELF, NOT a product):
-- imagePrompt: one FLUX.2-pro prompt describing the standalone illustration / typography composition.
-- **NEVER mention "t-shirt", "shirt", "hoodie", "mug", "tote", "mockup", "garment", "apparel" or any product word inside imagePrompt.** FLUX will draw whatever you describe — if you say "t-shirt graphic" it will render a t-shirt. Describe ONLY the illustration subject (e.g. "a grumpy cat sitting on a folding chair with bold text above reading 'MY OTHER CAR IS A FOLDING CHAIR'").
-- The output must be a standalone STICKER / CLIP-ART / PRINT-READY VECTOR on a blank background. The garment will be added later by the print-on-demand system.
+- imagePrompt: one FLUX.2-pro prompt describing the standalone flat-vector illustration / typography composition.
+- **NEVER mention "t-shirt", "shirt", "hoodie", "mug", "tote", "mockup", "garment", "apparel" or any product word inside imagePrompt.** FLUX will draw whatever you describe — if you say "t-shirt graphic" it will render a t-shirt. Describe ONLY the illustration subject. Example for typography-led: 'Bold chunky stacked typography reading RUNNING ON CAFFEINE AND POOR DECISIONS in 3 lines, navy outline, coral and mustard fills, tiny coffee bean accents around the letters, transparent background.' Example for object-led: 'A vintage enamel coffee mug tipped slightly, steam rising in cursive that spells EMOTIONAL SUPPORT, dark navy outline, sage and burnt-orange fills, transparent background.'
+- **NEVER use the words "sticker", "die-cut", "decal", "label", "patch", or "badge"** — these cause FLUX to add a thick white outline halo around the entire design, which ruins the print. Use "flat vector illustration" or "transparent print-ready artwork" instead.
+- The output must be a standalone PRINT-READY VECTOR ILLUSTRATION on a fully transparent background. The garment will be added later by the print-on-demand system. The outermost pixel of the artwork must be the artwork's own dark stroke — NO outer white halo, ring, glow, or sticker border around the whole design.
 - DUAL-MODE PALETTE (so it reads on both light and dark garments): dark outline (deep navy / near-black / charcoal, ~2-3px stroke) around every filled shape + MID-TONE fills (teal, coral, dusty pink, mustard, sage, lavender, burnt orange) + small BRIGHT ACCENTS (hot pink, neon yellow, electric blue, lime, magenta).
 - FORBIDDEN fills: pure white (#ffffff) without a dark outline. Pure black (#000000) without a light/bright outline. No cream / off-white / pastel solid fills.
-- Specify: transparent or solid white background, crisp bold linework, no photorealism, NO garment, NO mockup, NO model, NO hanger, NO fabric, NO frame, NO scene.
+- Specify: transparent background, crisp bold linework, no photorealism, NO garment, NO mockup, NO model, NO hanger, NO fabric, NO frame, NO scene, NO sticker outline.
 - FLUX SAFETY: PG-rated only. No weapons, combat, blood, realistic armor, aggressive poses. For fantasy figures use soft mascot / plush / costume style.
 
 DESCRIPTION RULES:
@@ -107,7 +84,7 @@ Return ONLY this JSON shape — every field required unless marked optional:
   "description": "200-350 word creative section: hook + Perfect for bullets + DETAILS bullets. NO product features / care / footer.",
   "tags": ["exactly", "thirteen", "tags", "lowercase"],
   "keywords": ["10 to 15 long-tail SEO keywords"],
-  "imagePrompt": "Describe ONLY the illustration subject (characters, objects, typography). NEVER use the words shirt/tshirt/hoodie/mug/tote/mockup/garment. Vector sticker / clip-art style. Dual-mode palette: dark outline + mid-tone fills + bright accents. Transparent or solid-white background. No photorealism.",
+  "imagePrompt": "Describe ONLY the illustration subject (characters, objects, typography). NEVER use the words shirt/tshirt/hoodie/mug/tote/mockup/garment OR sticker/die-cut/decal/label. Flat vector illustration style. Dual-mode palette: dark outline + mid-tone fills + bright accents. Transparent background — NO outer white halo / sticker border around the whole design. No photorealism.",
   "printReadyPrompt": "POD print specs: typography, stroke weights, palette",
   "category": "tshirt|hoodie|sweatshirt|mug|poster|shower-curtain|phone-case|tote-bag|pillow|other",
   "humorStyle": "e.g. sarcastic dad joke, relatable burnout",

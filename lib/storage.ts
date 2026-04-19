@@ -2,6 +2,7 @@ import 'server-only';
 import { promises as fs } from 'fs';
 import path from 'path';
 import type { DesignManifest } from '@/src/types';
+import { sanitizeEtsyTitle } from '@/src/utils';
 
 const DESIGNS_ROOT = path.join(process.cwd(), 'designs');
 const DATA_DIR = path.join(process.cwd(), 'data');
@@ -55,72 +56,52 @@ export async function readManifest(slug: string): Promise<DesignManifest | null>
  * have recommended_shirt_colors as an empty array instead of an object. This shim
  * makes legacy data renderable by the new UI without touching the source files.
  */
-// Duplicated here (rather than importing from src/ai) to keep storage free of LLM deps.
-function sanitizeTitleInline(raw: string): string {
-  return raw
-    .replace(/â€™/g, "'")
-    .replace(/â€˜/g, "'")
-    .replace(/â€œ/g, '"')
-    .replace(/â€\u009d/g, '"')
-    .replace(/â€/g, '"')
-    .replace(/â€"/g, '-')
-    .replace(/â€“/g, '-')
-    .replace(/â€”/g, '-')
-    .replace(/â€¦/g, '...')
-    .replace(/[\u2018\u2019\u201B\u2032]/g, "'")
-    .replace(/[\u201C\u201D\u201F\u2033]/g, '"')
-    .replace(/[\u2013\u2014\u2015]/g, '-')
-    .replace(/[\u2026]/g, '...')
-    .replace(/[`$^]/g, '')
-    .replace(/\s+/g, ' ')
-    .trim()
-    .slice(0, 140);
-}
-
-function normalizeManifest(raw: any): DesignManifest {
-  const rsc = raw.recommended_shirt_colors || raw.recommended_product_colors;
+function normalizeManifest(raw: Record<string, unknown>): DesignManifest {
+  const rsc = (raw.recommended_shirt_colors ?? raw.recommended_product_colors) as
+    | { light_variant?: string[]; dark_variant?: string[] }
+    | unknown[]
+    | undefined;
   const recommended_product_colors =
     rsc && typeof rsc === 'object' && !Array.isArray(rsc)
       ? {
-          light_variant: rsc.light_variant ?? [],
-          dark_variant: rsc.dark_variant ?? [],
+          light_variant: (rsc as { light_variant?: string[] }).light_variant ?? [],
+          dark_variant: (rsc as { dark_variant?: string[] }).dark_variant ?? [],
         }
       : { light_variant: [], dark_variant: [] };
 
   // Migrate legacy two-image manifests to the new single-image shape.
-  const image =
-    raw.files?.image ??
-    raw.files?.light ??
-    raw.files?.dark ??
-    '';
+  const files = raw.files as Record<string, string> | undefined;
+  const image = files?.image ?? files?.light ?? files?.dark ?? '';
+
+  const pids = raw.printify_image_ids as Record<string, string> | undefined;
   const printifyImageId =
-    raw.printify_image_id ??
-    raw.printify_image_ids?.image ??
-    raw.printify_image_ids?.light ??
-    raw.printify_image_ids?.dark ??
+    (raw.printify_image_id as string | undefined) ??
+    pids?.image ??
+    pids?.light ??
+    pids?.dark ??
     undefined;
 
-  const rawTitle: string = raw.title ?? raw.slug ?? '';
-  const title = sanitizeTitleInline(rawTitle);
+  const rawTitle = ((raw.title ?? raw.slug ?? '') as string);
+  const title = sanitizeEtsyTitle(rawTitle);
 
   return {
-    slug: raw.slug ?? '',
-    concept: raw.concept ?? '',
+    slug: (raw.slug as string | undefined) ?? '',
+    concept: (raw.concept as string | undefined) ?? '',
     title,
-    description: raw.description ?? '',
-    product_features: Array.isArray(raw.product_features) ? raw.product_features : [],
-    care_instructions: Array.isArray(raw.care_instructions) ? raw.care_instructions : [],
-    listing_footer: raw.listing_footer ?? '',
-    tags: Array.isArray(raw.tags) ? raw.tags : [],
-    keywords: Array.isArray(raw.keywords) ? raw.keywords : [],
+    description: (raw.description as string | undefined) ?? '',
+    product_features: Array.isArray(raw.product_features) ? (raw.product_features as string[]) : [],
+    care_instructions: Array.isArray(raw.care_instructions) ? (raw.care_instructions as string[]) : [],
+    listing_footer: (raw.listing_footer as string | undefined) ?? '',
+    tags: Array.isArray(raw.tags) ? (raw.tags as string[]) : [],
+    keywords: Array.isArray(raw.keywords) ? (raw.keywords as string[]) : [],
     recommended_product_colors,
     files: { image },
-    mockups: Array.isArray(raw.mockups) ? raw.mockups : [],
+    mockups: Array.isArray(raw.mockups) ? (raw.mockups as string[]) : [],
     printify_image_id: printifyImageId,
-    printify_mockups: Array.isArray(raw.printify_mockups) ? raw.printify_mockups : [],
-    printify_products: Array.isArray(raw.printify_products) ? raw.printify_products : [],
-    qa_reviews: raw.qa_reviews,
-    created_at: raw.created_at ?? new Date(0).toISOString(),
+    printify_mockups: Array.isArray(raw.printify_mockups) ? (raw.printify_mockups as DesignManifest['printify_mockups']) : [],
+    printify_products: Array.isArray(raw.printify_products) ? (raw.printify_products as DesignManifest['printify_products']) : [],
+    qa_reviews: raw.qa_reviews as DesignManifest['qa_reviews'],
+    created_at: (raw.created_at as string | undefined) ?? new Date(0).toISOString(),
   };
 }
 
