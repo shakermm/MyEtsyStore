@@ -58,6 +58,15 @@ export async function readManifest(slug: string): Promise<DesignManifest | null>
 // Duplicated here (rather than importing from src/ai) to keep storage free of LLM deps.
 function sanitizeTitleInline(raw: string): string {
   return raw
+    .replace(/â€™/g, "'")
+    .replace(/â€˜/g, "'")
+    .replace(/â€œ/g, '"')
+    .replace(/â€\u009d/g, '"')
+    .replace(/â€/g, '"')
+    .replace(/â€"/g, '-')
+    .replace(/â€“/g, '-')
+    .replace(/â€”/g, '-')
+    .replace(/â€¦/g, '...')
     .replace(/[\u2018\u2019\u201B\u2032]/g, "'")
     .replace(/[\u201C\u201D\u201F\u2033]/g, '"')
     .replace(/[\u2013\u2014\u2015]/g, '-')
